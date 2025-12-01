@@ -1,2 +1,0 @@
-# SIESTA
-SIESTA App
