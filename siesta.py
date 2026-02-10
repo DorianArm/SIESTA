@@ -3,7 +3,6 @@ from siesta_package.siesta_utils import *
 
 #-------- Main App --------#
 
-
 ### Select spectral range in nm
 spectral_range = (507, 875)
 
@@ -27,10 +26,6 @@ centers_list = [(cmosx_max/2,cmosy_max/2)]
 ### Select number of spectral points to compute (for each spatial element)
 spectral_res = 0.02 #nm, used for sampling spectral range.
 
-### depreciated (do not remove), was working with plotly only
-save_file = False #not working with Dash, need to find a solution
-
-
 ### Select optical elements parameters ###
 ech = EchelleGrating(name="thorlabs echelle", groove_density=31.6, blaze_angle=63, semi_deviation_angle_deg=7.5)
 disp = Grating(name="disperser", groove_density=300)
@@ -46,8 +41,8 @@ collimator = Lens(name="collimator", focal_length=200, diameter=50)
 slit = Slit(name="slit", width=0.03, height=0.2) #mm @ZimMAIN 60" = 1.629 mm and 5" = 0.136 mm, 1" = 27 um
 # slit = Slit(name="slit", width=0.492, height=5.905) #mm @SST 60" = 5.905 mm and 5" = 0.492 mm, 1" = 98.4 um
 if __name__ == "__main__":
-    df_mapping_list = computeCD(spatial_centers=centers_list, spectral_range=spectral_range, spectral_res=spectral_res, echelle=ech, disperser=disp, camera_lens=camera, collimator_lens=collimator, cmosx_max=cmosx_max, cmosy_max=cmosy_max, alpha_deg=15, slit=slit,write_hmtl=save_file)
-# df_mapping_list = computeCD(spatial_centers=centers_list, spectral_range=spectral_range, n_spectral=n_spectral, echelle=ech, disperser=disp_prism, camera_lens=camera, collimator_lens=collimator, cmosx_max=cmosx_max, cmosy_max=cmosy_max, alpha_deg=15, slit=slit,write_hmtl=save_file)
+    df_mapping_list = computeCD(spatial_centers=centers_list, spectral_range=spectral_range, spectral_res=spectral_res, echelle=ech, disperser=disp, camera_lens=camera, collimator_lens=collimator, cmosx_max=cmosx_max, cmosy_max=cmosy_max, alpha_deg=15, slit=slit)
+# df_mapping_list = computeCD(spatial_centers=centers_list, spectral_range=spectral_range, n_spectral=n_spectral, echelle=ech, disperser=disp_prism, camera_lens=camera, collimator_lens=collimator, cmosx_max=cmosx_max, cmosy_max=cmosy_max, alpha_deg=15, slit=slit)
 
 
 

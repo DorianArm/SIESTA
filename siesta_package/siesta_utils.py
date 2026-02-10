@@ -160,7 +160,7 @@ class EchelleGrating(Grating):
 
 
 ###-------------------- Functions --------------------###
-def computeCD(spatial_centers: list, spectral_range: tuple, spectral_res: float, echelle: EchelleGrating, disperser: Grating | Prism, collimator_lens: Lens, camera_lens: Lens, cmosx_max: float, cmosy_max: float, alpha_deg: float, slit: Slit, write_hmtl: bool):
+def computeCD(spatial_centers: list, spectral_range: tuple, spectral_res: float, echelle: EchelleGrating, disperser: Grating | Prism, collimator_lens: Lens, camera_lens: Lens, cmosx_max: float, cmosy_max: float, alpha_deg: float, slit: Slit):
     
     spectral_array = np.arange(start=spectral_range[0], stop=spectral_range[1]+spectral_res, step=spectral_res)# in Angstrom
     # n_spectral = len(spectral_array)
@@ -312,7 +312,7 @@ def computeCD(spatial_centers: list, spectral_range: tuple, spectral_res: float,
             color_list.append("#%02x%02x%02x" % (R,G,B)) 
         return color_list
 
-    def DrawGrid(df_cmos, df_mapping_list, slit_width_cmos, slit_height_cmos, write_bool):
+    def DrawGrid(df_cmos, df_mapping_list, slit_width_cmos, slit_height_cmos):
 
         #-----Plotting Parameters------#
         lines = list(spectral_lines.keys())
@@ -603,6 +603,6 @@ def computeCD(spatial_centers: list, spectral_range: tuple, spectral_res: float,
     # print(slit_width_cmos, slit_height_cmos)
     # print(color_list,len(color_list))
     df_cmos = CreateDF_cmos(cmosx_max=cmosx_max, cmosy_max=cmosy_max)
-    DrawGrid(df_cmos=df_cmos, df_mapping_list=df_mapping_list,slit_height_cmos=slit_height_cmos, slit_width_cmos=slit_width_cmos,write_bool=write_hmtl)
+    DrawGrid(df_cmos=df_cmos, df_mapping_list=df_mapping_list,slit_height_cmos=slit_height_cmos, slit_width_cmos=slit_width_cmos)
 
     return df_mapping_list
