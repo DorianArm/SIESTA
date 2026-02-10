@@ -1,3 +1,17 @@
+import numpy as np
+# import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
+import dash
+from dash import dcc, html
+from dash.dependencies import Input, Output
+from math import ceil, floor
+import pandas as pd
+import os.path
+import refractiveindex as ri
+
+
 # Base class for optical elements
 class OpticalElement:
     def __init__(self, name: str):
@@ -38,8 +52,6 @@ class Grating(OpticalElement):
         self.groove_density = groove_density  # in grooves per mm
         self.alpha = alpha # in degrees
         self.diffraction_order = m_order
-
-        
     
     def __str__(self):
         return f"Grating: {self.name}, Groove Density: {self.groove_density} grooves/mm"
@@ -156,7 +168,23 @@ def computeCD(spatial_centers: list, spectral_range: tuple, n_spectral: int, ech
     
     spectral_array = np.linspace(start=spectral_range[0], stop=spectral_range[1], num=n_spectral, endpoint=True)
 
-    spectral_lines = {"Mg I b3 5167": 516.7 ,"Mg I b2 5172": 517.2 ,"Mg I b1 5183": 518.3 ,"Fe I 5250": 525.0,"Mn I 5399": 539.9, "He I D3 5876":587.6, "Na I D2 5890": 589.0 ,"Na I D1 5896": 589.6,"Fe I 6173 (HMI)": 617.3, "Fe I 6301-6302": 630.15,"Ca I 6439": 643.9, "Ha": 656.3, "Ni I 6643": 664.3,"Fe I/Ca I 6718": 671.8,"K I 7699": 769.9,"Ca II 8498": 849.8, "Ca II 8542": 854.2,"Ca II 8662": 866.2} #to be continued, rn only wl > 500 nm
+    # Neon I NIST spectral lines
+    neon_lines = np.load("./NIST_Atomic-Specie/Neon.npy")
+    neon_lines = np.squeeze(neon_lines)
+    neon_lines = neon_lines.tolist()
+
+    # Thorium I NIST spectral lines
+    thorium_lines = np.load("./NIST_Atomic-Specie/Thorium0.95.npy")
+    thorium_lines = np.squeeze(thorium_lines)
+    thorium_lines = thorium_lines.tolist()
+
+    # Argon I NIST spectral lines
+    argon_lines = np.load("./NIST_Atomic-Specie/Argon0.95.npy")
+    argon_lines = np.squeeze(argon_lines)
+    argon_lines = argon_lines.tolist()
+
+
+    spectral_lines = {"Mg I b3 5167": [516.7] ,"Mg I b2 5172": [517.2] ,"Mg I b1 5183": [518.3] ,"Fe I 5250": [525.0],"Mn I 5399": [539.9], "He I D3 5876":[587.6], "Na I D2 5890": [589.0] ,"Na I D1 5896": [589.6],"Fe I 6173 (HMI)": [617.3], "Fe I 6301-6302": [630.15],"Ca I 6439": [643.9], "Ha": [656.3], "Ni I 6643": [664.3],"Fe I/Ca I 6718": [671.8],"K I 7699": [769.9],"Ca II 8498": [849.8], "Ca II 8542": [854.2],"Ca II 8662": [866.2], "Neon": neon_lines, "Thorium": thorium_lines, "Argon": argon_lines} #to be continued, rn only wl > 500 nm
 
     
     def ComputeX(cmosx0, spectral_array, cmosx_max):
@@ -166,7 +194,7 @@ def computeCD(spatial_centers: list, spectral_range: tuple, n_spectral: int, ech
         max_order = ceil(echelle.compute_diffractionorder(spectral_array[0]))
         min_order = floor(echelle.compute_diffractionorder(spectral_array[-1]))
 
-        diffraction_order_array = np.arange(start=min_order, stop=max_order, step=1)
+        diffraction_order_array = np.arange(start=min_order, stop=max_order+1, step=1)
         blaze_wavelength_array = echelle.compute_blazewavelength(diffraction_order=diffraction_order_array)
         FSR_array = echelle.compute_FSR(blazewavelength_array=blaze_wavelength_array)
         angular_dispersion_array = echelle.compute_angularDispE(wavelength_nm=blaze_wavelength_array)
@@ -289,46 +317,20 @@ def computeCD(spatial_centers: list, spectral_range: tuple, n_spectral: int, ech
 
     def DrawGrid(df_cmos, df_mapping_list, slit_width_cmos, slit_height_cmos, write_bool):
 
-        #Functions
-        # def CrossedRectangle(x_center, y_center, width, height, linewidth_cross, linewidth_rectangle=0,line_color='white', fill_color='white'):
-        #     half_width = width / 2
-        #     half_height = height / 2
-
-        #     # Rectangle coordinates
-        #     x0, y0 = x_center - half_width, y_center - half_height
-        #     x1, y1 = x_center + half_width, y_center + half_height
-
-        #     return [
-        #         # # Rectangle
-        #         # {
-        #         # 'type': 'rect',
-        #         # 'x0': x0,
-        #         # 'y0': y0,
-        #         # 'x1': x1,
-        #         # 'y1': y1,
-        #         # 'line': {
-        #         #     'color': line_color,
-        #         #     'width': linewidth_rectangle
-        #         # },
-        #         # 'fillcolor': fill_color  # Adding fill color
-        #         # },
-        #         # Horizontal line
-        #         {
-        #             'type': 'line',
-        #             'x0': x0, 'y0': y_center, 'x1': x1, 'y1': y_center,
-        #             'line': {'color': line_color, 'width': linewidth_cross}
-        #         },
-        #         # Vertical line
-        #         {
-        #             'type': 'line',
-        #             'x0': x_center, 'y0': y0, 'x1': x_center, 'y1': y1,
-        #             'line': {'color': line_color, 'width': linewidth_cross}
-        #         }
-        #     ]
-
         #-----Plotting Parameters------#
         lines = list(spectral_lines.keys())
-        selection_spectral_windows = {k: df_mapping_list[0].loc[(df_mapping_list[0]["wavelengths"]<=(v+1)) & (df_mapping_list[0]["wavelengths"]>= (v-1))] for k,v in spectral_lines.items()}
+        selection_spectral_windows = {
+                                        k: pd.concat(
+                                            [
+                                                df_mapping_list[0].loc[
+                                                    (df_mapping_list[0]["wavelengths"] <= v + 0.05) &
+                                                    (df_mapping_list[0]["wavelengths"] >= v - 0.05) #0.2 nm window
+                                                ]
+                                                for v in v_list
+                                            ]
+                                        )
+                                        for k, v_list in spectral_lines.items()
+                                    }
 
         #-----Actual Plotting------#
         app = dash.Dash(__name__)
@@ -579,8 +581,8 @@ def computeCD(spatial_centers: list, spectral_range: tuple, n_spectral: int, ech
 
                 return fig
         # Run the app
-        if __name__ == '__main__':
-            app.run_server(debug=True,port=8050)
+        app.run(debug=True,port=8050,jupyter_mode='tab') #jupyter_mode='tab' : opens automatically browser, 'external' not.
+        
         
 
     #computations
