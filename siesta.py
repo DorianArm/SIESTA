@@ -33,7 +33,14 @@ save_file = False #not working with Dash, need to find a solution
 
 ### Select optical elements parameters ###
 ech = EchelleGrating(name="thorlabs echelle", groove_density=31.6, blaze_angle=63, semi_deviation_angle_deg=7.5)
-disp = Grating(name="disperser", groove_density=300)  
+disp = Grating(name="disperser", groove_density=300)
+# disp_prism = Prism(name="disperser prism", glass_type=["main","CaF2","Li"], beam_diameter=25, base=100)
+# disp_prism = Prism(name="disperser prism", glass_type=["specs","SCHOTT-optical","SF11"], beam_diameter=15, base=25,manual=True) #sf11 manual prism
+# disp_prism = Prism(name="disperser prism", glass_type=["specs","SCHOTT-optical","BK7"], beam_diameter=15, base=25,manual=True) #sf11 manual prism
+# disp_prism = Prism(name="disperser prism", glass_type=["main","ZnSe","Marple"], beam_diameter=15, base=5,manual=True) #sf11 manual prism
+# sf11 S coeffs: [2, 0.0, 1.7385, 0.0136, 0.311, 0.0616, 1.1749, 121.92] #First element 2 is to specify Sllemeir-2 formula
+# N-BK7 S coeffs: [2, 0.0, 1.12735, 0.0072, 0.1244, 0.0270, 0.827, 100.38] #First element 2 is to specify Sllemeir-2 formula
+# ZnSe S coeffs: [2, 3, 1.9, 0.113, 0.0, 0.0, 0.0, 0] #First element 2 is to specify Sllemeir-2 formula
 camera = Lens(name="camera", focal_length=100, diameter=50)
 collimator = Lens(name="collimator", focal_length=200, diameter=50)
 slit = Slit(name="slit", width=0.03, height=0.2) #mm @ZimMAIN 60" = 1.629 mm and 5" = 0.136 mm, 1" = 27 um
