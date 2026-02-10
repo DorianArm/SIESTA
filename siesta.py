@@ -25,7 +25,7 @@ centers_list = [(cmosx_max/2,cmosy_max/2)]
 # centers_list = [(cmosx_max/6,0.18*cmosy_max),(cmosx_max/2,0.18*cmosy_max),(5/6*cmosx_max,0.18*cmosy_max),(cmosx_max/6,0.51*cmosy_max),(cmosx_max/2,0.51*cmosy_max),(5/6*cmosx_max,0.51*cmosy_max),(1/6*cmosx_max,0.84*cmosy_max),(1/2*cmosx_max,0.84*cmosy_max),(5/6*cmosx_max,0.84*cmosy_max)]
 
 ### Select number of spectral points to compute (for each spatial element)
-n_spectral = 10000
+spectral_res = 0.02 #nm, used for sampling spectral range.
 
 ### depreciated (do not remove), was working with plotly only
 save_file = False #not working with Dash, need to find a solution
@@ -46,7 +46,7 @@ collimator = Lens(name="collimator", focal_length=200, diameter=50)
 slit = Slit(name="slit", width=0.03, height=0.2) #mm @ZimMAIN 60" = 1.629 mm and 5" = 0.136 mm, 1" = 27 um
 # slit = Slit(name="slit", width=0.492, height=5.905) #mm @SST 60" = 5.905 mm and 5" = 0.492 mm, 1" = 98.4 um
 if __name__ == "__main__":
-    df_mapping_list = computeCD(spatial_centers=centers_list, spectral_range=spectral_range, n_spectral=n_spectral, echelle=ech, disperser=disp, camera_lens=camera, collimator_lens=collimator, cmosx_max=cmosx_max, cmosy_max=cmosy_max, alpha_deg=15, slit=slit,write_hmtl=save_file)
+    df_mapping_list = computeCD(spatial_centers=centers_list, spectral_range=spectral_range, spectral_res=spectral_res, echelle=ech, disperser=disp, camera_lens=camera, collimator_lens=collimator, cmosx_max=cmosx_max, cmosy_max=cmosy_max, alpha_deg=15, slit=slit,write_hmtl=save_file)
 # df_mapping_list = computeCD(spatial_centers=centers_list, spectral_range=spectral_range, n_spectral=n_spectral, echelle=ech, disperser=disp_prism, camera_lens=camera, collimator_lens=collimator, cmosx_max=cmosx_max, cmosy_max=cmosy_max, alpha_deg=15, slit=slit,write_hmtl=save_file)
 
 

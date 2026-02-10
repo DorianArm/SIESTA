@@ -1,5 +1,5 @@
+###-------------------- Import Modules --------------------###
 import numpy as np
-# import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -12,6 +12,8 @@ import os.path
 import refractiveindex as ri
 
 
+
+###-------------------- Classes --------------------###
 # Base class for optical elements
 class OpticalElement:
     def __init__(self, name: str):
@@ -21,7 +23,7 @@ class OpticalElement:
         return f"Optical Element: {self.name}"
     
 
-#Class slit
+# Class for slits
 class Slit(OpticalElement):
     def __init__(self, name: str, width: float, height: float):
         super().__init__(name)
@@ -31,7 +33,8 @@ class Slit(OpticalElement):
     def __str__(self):
         return f"Slit: {self.name}, Width: {self.width} mm, Height: {self.height} mm"
     
-#Class for Lenses
+
+# Class for lenses
 class Lens(OpticalElement):
     def __init__(self, name: str, focal_length: float, diameter: float):
         super().__init__(name)
@@ -42,11 +45,8 @@ class Lens(OpticalElement):
         return f"Lens: {self.name}, Focal Length: {self.focal_length} mm, Diameter: {self.diameter} mm"
 
 
-
 #Class for Gratings
 class Grating(OpticalElement):
-
-
     def __init__(self, name: str, groove_density: float, alpha: float = 0, m_order: int = 1):
         super().__init__(name)
         self.groove_density = groove_density  # in grooves per mm
@@ -63,13 +63,13 @@ class Grating(OpticalElement):
             print("diffraction order is not possible")
         return A
 
-#Class for Prisms
+# Class for prisms
 class Prism(OpticalElement):
 
     def __init__(self, name: str, glass_type: list, beam_diameter: float, base:float, manual: bool = False):
         super().__init__(name)
         self.glass_type = glass_type #expected as in refractiveindex database : [shelf, book, page]
-        self.beam_diameter= beam_diameter  # in deg
+        self.beam_diameter= beam_diameter  # in mm
         self.base = base # base length in mm
         self.manual = manual
 
@@ -78,7 +78,7 @@ class Prism(OpticalElement):
         return f"Prism: {self.name}, Base length [mm]: {self.base}, Beam diameter [mm]: {self.beam_diameter}, Glass Type: Shelf={self.glass_type[0]},Book={self.glass_type[1]},Page={self.glass_type[2]}"
     
 
-    def GetScoeffs(self, verbose: bool = True):
+    def GetScoeffs(self, verbose: bool = True, sellmeierCoeffs: list =[1,0,0,0,0,0,0]):
         if self.manual == False:
             shelf = self.glass_type[0]
             book = self.glass_type[1]
@@ -89,7 +89,7 @@ class Prism(OpticalElement):
                 print(f"Sellmeier coefficients for {shelf} {book} {page}: {coeffs}")
             
         else: #manual==True so manual input of Sellmeier coefficients
-            coeffs = input("Enter Sellmeier coefficients in the form [n0,n1,n2,n3,n4,n5,n6]: ")
+            coeffs = sellmeierCoeffs
             coeffs = coeffs.replace("[","").replace("]","").split(",")
             coeffs = [float(i) for i in coeffs]
             sellmeier_formula = coeffs[0]
@@ -132,7 +132,7 @@ class Prism(OpticalElement):
 
     
 
-#Class for Echelle Gratings
+# Class for Echelle gratings
 class EchelleGrating(Grating):
     def __init__(self, name: str, groove_density: float, blaze_angle: float, semi_deviation_angle_deg: float):
         super().__init__(name,groove_density)
@@ -150,7 +150,6 @@ class EchelleGrating(Grating):
         m = 2 * np.sin(np.deg2rad(self.blaze_angle)*np.cos(np.deg2rad(self.semi_deviation_angle_deg))) / (self.groove_density*blazewavelength/1e6)
         return m
 
-
     def compute_blazewavelength(self, diffraction_order: np.ndarray):
         blaze_wavelength_nm  = 2 * 1e6 * np.ones(np.shape(diffraction_order)) * np.sin(np.deg2rad(self.blaze_angle)*np.cos(np.deg2rad(self.semi_deviation_angle_deg))) / (self.groove_density*diffraction_order)
         return blaze_wavelength_nm
@@ -160,13 +159,11 @@ class EchelleGrating(Grating):
         return FSR_nm
 
 
-
-
-
-#------ Main function
-def computeCD(spatial_centers: list, spectral_range: tuple, n_spectral: int, echelle: EchelleGrating, disperser: Grating | Prism, collimator_lens: Lens, camera_lens: Lens, cmosx_max: float, cmosy_max: float, alpha_deg: float, slit: Slit, write_hmtl: bool):
+###-------------------- Functions --------------------###
+def computeCD(spatial_centers: list, spectral_range: tuple, spectral_res: float, echelle: EchelleGrating, disperser: Grating | Prism, collimator_lens: Lens, camera_lens: Lens, cmosx_max: float, cmosy_max: float, alpha_deg: float, slit: Slit, write_hmtl: bool):
     
-    spectral_array = np.linspace(start=spectral_range[0], stop=spectral_range[1], num=n_spectral, endpoint=True)
+    spectral_array = np.arange(start=spectral_range[0], stop=spectral_range[1]+spectral_res, step=spectral_res)# in Angstrom
+    # n_spectral = len(spectral_array)
 
     # Neon I NIST spectral lines
     neon_lines = np.load("./NIST_Atomic-Specie/Neon.npy")
@@ -187,7 +184,7 @@ def computeCD(spatial_centers: list, spectral_range: tuple, n_spectral: int, ech
     spectral_lines = {"Mg I b3 5167": [516.7] ,"Mg I b2 5172": [517.2] ,"Mg I b1 5183": [518.3] ,"Fe I 5250": [525.0],"Mn I 5399": [539.9], "He I D3 5876":[587.6], "Na I D2 5890": [589.0] ,"Na I D1 5896": [589.6],"Fe I 6173 (HMI)": [617.3], "Fe I 6301-6302": [630.15],"Ca I 6439": [643.9], "Ha": [656.3], "Ni I 6643": [664.3],"Fe I/Ca I 6718": [671.8],"K I 7699": [769.9],"Ca II 8498": [849.8], "Ca II 8542": [854.2],"Ca II 8662": [866.2], "Neon": neon_lines, "Thorium": thorium_lines, "Argon": argon_lines} #to be continued, rn only wl > 500 nm
 
     
-    def ComputeX(cmosx0, spectral_array, cmosx_max):
+    def ComputeX(cmosx0, spectral_array):
         #center of cmos on x axis
         # cmosx0 = 0
 
@@ -205,7 +202,7 @@ def computeCD(spatial_centers: list, spectral_range: tuple, n_spectral: int, ech
         cmosx = camera_lens.focal_length * angular_dispersion_array[np.maximum(index_FSR-1,0)]/1000 * (spectral_array - blaze_wavelength_array[np.maximum(index_FSR-1,0)]) + np.ones(np.shape(spectral_array)) * cmosx0 #mm (mrad.nm⁻1 to rad.nm⁻1 was done with /1000)
         return cmosx,diffraction_order_array[np.maximum(index_FSR-1,0)],blaze_wavelength_array[np.maximum(index_FSR-1,0)], angular_dispersion_array[np.maximum(index_FSR-1,0)], FSR_array[np.maximum(index_FSR-1,0)]
 
-    def ComputeY(cmosy0, spectral_array, cmosy_max, alpha_deg):
+    def ComputeY(cmosy0, spectral_array):
         
         #definitions and initial position (central wavelength in y-center of cmos)
         lambda0 = (spectral_array[-1] + spectral_array[0]) / 2 
@@ -592,8 +589,8 @@ def computeCD(spatial_centers: list, spectral_range: tuple, n_spectral: int, ech
     slit_height_cmos = slit.height * demag_y
     df_mapping_list = []
     for x0,y0 in spatial_centers:
-        cmosx,diffraction_order_array,blaze_wavelength_array, angular_dispersion_array,FSR_array = ComputeX(cmosx0=x0,spectral_array=spectral_array, cmosx_max= cmosx_max)
-        cmosy, Ac = ComputeY(cmosy0=y0,spectral_array=spectral_array,cmosy_max= cmosy_max,alpha_deg= alpha_deg)
+        cmosx,diffraction_order_array,blaze_wavelength_array, angular_dispersion_array,FSR_array = ComputeX(cmosx0=x0,spectral_array=spectral_array)
+        cmosy, Ac = ComputeY(cmosy0=y0,spectral_array=spectral_array)
 
         df_mapping = CreateDF_mapping(spatial_centers=(x0,y0), cmosx=cmosx, cmosy=cmosy, diffraction_order_array=diffraction_order_array, blaze_wavelength_array=blaze_wavelength_array, dispersion_x=angular_dispersion_array, dispersion_y=Ac, color_array=color_list, slit_width_cmos=slit_width_cmos,slit_height_cmos=slit_height_cmos,fsr_array=FSR_array)
         df_mapping_list.append(df_mapping)
