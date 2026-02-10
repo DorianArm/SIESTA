@@ -16,6 +16,6 @@ setup(
         "pandas>=2.0",
         "dash>=3.0",
         "plotly>=5.0",
-        "refractiveindex>=0.1.0"
+        "refractiveindex>=0.0.1"
     ],
 )
