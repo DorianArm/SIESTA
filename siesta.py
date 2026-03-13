@@ -4,7 +4,7 @@ from siesta_package.siesta_utils import *
 #-------- Main App --------#
 
 ### Select spectral range in nm
-spectral_range = (507, 875)
+spectral_range = (350, 875)
 
 ### Select camera sensor size
 #Emergent camera size
@@ -30,7 +30,7 @@ spectral_res = 0.02 #nm, used for sampling spectral range.
 ech = EchelleGrating(name="thorlabs echelle", groove_density=31.6, blaze_angle=63, semi_deviation_angle_deg=3)
 # ech = EchelleGrating(name="thorlabs echelle", groove_density=110, blaze_angle=63, semi_deviation_angle_deg=7.5)
 # disp = Grating(name="disperser", groove_density=300)
-disp = Prism(name="disperser prism", glass_type=["main","CaF2","Li"], beam_diameter=25, base=100)
+disp = Prism(name="disperser prism", glass_type=["main","CaF2","Li"], beam_diameter=20, base=100)
 # disp_prism = Prism(name="disperser prism", glass_type=["specs","SCHOTT-optical","SF11"], beam_diameter=15, base=25,manual=True) #sf11 manual prism
 # disp_prism = Prism(name="disperser prism", glass_type=["specs","SCHOTT-optical","BK7"], beam_diameter=15, base=25,manual=True) #sf11 manual prism
 # disp = Prism(name="disperser prism", glass_type=["main","ZnSe","Marple"], beam_diameter=15, base=5,manual=False) #sf11 manual prism

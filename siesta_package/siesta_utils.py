@@ -84,7 +84,9 @@ class Prism(OpticalElement):
             book = self.glass_type[1]
             page = self.glass_type[2]
             glass = ri.RefractiveIndexMaterial(shelf=shelf,book=book,page=page)
-            coeffs = glass.material.refractiveIndex.coefficients
+            coeffs = glass._coefs
+
+
             if verbose:
                 print(f"Sellmeier coefficients for {shelf} {book} {page}: {coeffs}")
             
