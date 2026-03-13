@@ -260,7 +260,31 @@ class Instrument(OpticalElement):
     def computeCD(self,spectral_range_nm: tuple, spectral_res_nm: float, spatial_centers: list):
         spectral_array = np.arange(start=spectral_range_nm[0], stop=spectral_range_nm[1]+spectral_res_nm, step=spectral_res_nm)# in nm
 
+        color_list = self.getColor(wavelength=spectral_array, gamma=0.8)
+        demag_x, demag_y, r = self.computeMagnification()
+        slit_width_cmos, slit_height_cmos = self.slit.width * demag_x, self.slit.height * demag_y
         # cmosx, diffraction_order_array, blaze_wavelength_array, dispersion_x, FSR_array = self.__ComputeX(cmosx0=spatial_centers[0,], spectral_array=spectral_array)
+        
+        # vectorize ComputeX and ComputeY for each spatial center
+        # store everything in 1 dataframe to be able to export it as pkl, with 1 column spatial element
+        
+        df_mapping_list = []
+        for x0,y0 in spatial_centers:
+            cmosx,diffraction_order_array,blaze_wavelength_array, angular_dispersion_array,FSR_array = ComputeX(cmosx0=x0,spectral_array=spectral_array)
+            cmosy, Ac = self.__ComputeY(cmosy0=y0,spectral_array=spectral_array)
+
+            df_mapping = CreateDF_mapping(spatial_centers=(x0,y0), cmosx=cmosx, cmosy=cmosy, diffraction_order_array=diffraction_order_array, blaze_wavelength_array=blaze_wavelength_array, dispersion_x=angular_dispersion_array, dispersion_y=Ac, color_array=color_list, slit_width_cmos=slit_width_cmos,slit_height_cmos=slit_height_cmos,fsr_array=FSR_array)
+            df_mapping_list.append(df_mapping)
+        # df_mapping = pd.concat(df_mapping_list)
+
+        
+        
+        # print(demag_x)
+        
+        # print(slit_width_cmos, slit_height_cmos)
+        # print(color_list,len(color_list))
+        df_cmos = self.createDFFcmos()
+
         pass
     
     def createDFmapping(self, spectral_array, spatial_centers, cmosx, cmosy, diffraction_order_array, blaze_wavelength_array, dispersion_x, dispersion_y,color_array,slit_width_cmos,slit_height_cmos,fsr_array):
@@ -281,61 +305,57 @@ class Instrument(OpticalElement):
     
 
     ###-------------------- Frontend Methods --------------------###
-    def GetColor(selfwavelength, gamma=0.8):
+    def getColor(self,wavelength, gamma=0.8):
         #
         #    Based on code by Dan Bruton
         #    http://www.physics.sfasu.edu/astro/color/spectra.html
         #    '''
         # Adapted from <script src="https://gist.github.com/friendly/67a7df339aa999e2bcfcfec88311abfc.js"></script>
-        color_list = []
-        for i in range(np.shape(wavelength)[0]):
-            wl_i = wavelength[i]
-            if (wl_i < 380 or wl_i > 750):
-                R = 0.0
-                G = 0.0
-                B = 0.0
-            elif (wl_i >= 380 and wl_i <= 440):
-                attenuation = 0.3 + 0.7 * (wl_i - 380) / (440 - 380)
-                R = ((-(wl_i - 440) / (440 - 380)) * attenuation) ** gamma
-                G = 0.0
-                B = (1.0 * attenuation) ** gamma
-                
-            elif (wl_i >= 440 and wl_i <= 490):
-                R = 0.0
-                G = ((wl_i - 440) / (490 - 440)) ** gamma
-                B = 1.0
-                
-            elif (wl_i >= 490 and wl_i <= 510) :
-                R = 0.0
-                G = 1.0
-                B = (-(wl_i - 510) / (510 - 490)) ** gamma
-                
-            elif (wl_i >= 510 and wl_i <= 580):
-                R = ((wl_i - 510) / (580 - 510)) ** gamma
-                G = 1.0
-                B = 0.0
-            
-            elif (wl_i >= 580 and wl_i <= 645):  
-                R = 1.0
-                G = (-(wl_i - 645) / (645 - 580)) ** gamma
-                B = 0.0
-            
-            elif (wl_i >= 645 and wl_i <= 750):
-                attenuation = 0.3 + 0.7 * (750 - wl_i) / (750 - 645)
-                R = (1.0 * attenuation) ** gamma
-                G = 0.0
-                B = 0.0
-        
-            else:
-                R = 0.0
-                G = 0.0
-                B = 0.0
-                
-            R = round(R * 255)
-            G = round(G * 255)
-            B = round(B * 255)
-            color_list.append("#%02x%02x%02x" % (R,G,B)) 
-        return color_list
+        wl = np.asarray(wavelength, dtype=float)
+
+        R = np.zeros_like(wl)
+        G = np.zeros_like(wl)
+        B = np.zeros_like(wl)
+
+        # 380–440 nm
+        m = (wl >= 380) & (wl <= 440) # m boolean mask
+        att = 0.3 + 0.7 * (wl[m] - 380) / (440 - 380)
+        R[m] = (-(wl[m] - 440) / (440 - 380) * att) ** gamma
+        B[m] = (1.0 * att) ** gamma
+
+        # 440–490 nm
+        m = (wl > 440) & (wl <= 490)
+        G[m] = ((wl[m] - 440) / (490 - 440)) ** gamma
+        B[m] = 1.0
+
+        # 490–510 nm
+        m = (wl > 490) & (wl <= 510)
+        G[m] = 1.0
+        B[m] = (-(wl[m] - 510) / (510 - 490)) ** gamma
+
+        # 510–580 nm
+        m = (wl > 510) & (wl <= 580)
+        R[m] = ((wl[m] - 510) / (580 - 510)) ** gamma
+        G[m] = 1.0
+
+        # 580–645 nm
+        m = (wl > 580) & (wl <= 645)
+        R[m] = 1.0
+        G[m] = (-(wl[m] - 645) / (645 - 580)) ** gamma
+
+        # 645–750 nm
+        m = (wl > 645) & (wl <= 750)
+        att = 0.3 + 0.7 * (750 - wl[m]) / (750 - 645)
+        R[m] = (1.0 * att) ** gamma
+
+        # Scale to [0,255]
+        R = np.clip(R * 255, 0, 255).astype(np.uint8)
+        G = np.clip(G * 255, 0, 255).astype(np.uint8)
+        B = np.clip(B * 255, 0, 255).astype(np.uint8)
+
+        # Convert to hex strings
+        colors = [f"#{r:02x}{g:02x}{b:02x}" for r, g, b in zip(R, G, B)]
+        return colors
     
     def plotCD(self,df_cmos, df_mapping_list, slit_width_cmos, slit_height_cmos):
 
