@@ -163,6 +163,10 @@ class EchelleGrating(Grating):
         FSR_nm = (np.ones(np.shape(blazewavelength_array)) * self.groove_density/1e6 * np.power(blazewavelength_array,2)) / (2 * np.sin(np.deg2rad(self.blaze_angle)*np.cos(np.deg2rad(self.semi_deviation_angle_deg))))
         return FSR_nm
 
+    def __compute_exitAngle(self, wavelength_nm: float, m_diffraction_order: int):
+        exit_angle_rad = np.arcsin(self.groove_density/1e6*self.diffraction_order*wavelength_nm - np.sin(np.deg2rad(self.blaze_angle + self.semi_deviation_angle_deg)))
+        return exit_angle_rad
+
 class Camera_sensor(OpticalElement):
     def __init__(self, name: str, pixels_x: int, pixels_y: int, pixel_size: float):
         super().__init__(name)
@@ -243,12 +247,15 @@ class Instrument(OpticalElement):
         
         return None
     
+    
     def exportDFmapping(self, df_mapping_list: list, filename: str) -> None:
         current_datetime = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
         for i, df_mapping in enumerate(df_mapping_list, start=1):
             df_mapping.to_csv(f"{filename}_spatial_{i}_{current_datetime}.csv", index=False, sep="\t")
         
         return None
+    
+
     def __ComputeX(self, cmosx0: float, spectral_array: np.ndarray):
         
         max_order = ceil(self.echelle.compute_diffractionorder(spectral_array[0]))
@@ -262,6 +269,9 @@ class Instrument(OpticalElement):
 
         index_FSR = np.digitize(x=spectral_array, bins=FSR_bins)
 
+        # cmosx = self.camera_lens.focal_length * angular_dispersion_array[np.maximum(index_FSR-1,0)]/1000 * (spectral_array - blaze_wavelength_array[np.maximum(index_FSR-1,0)]) + np.ones(np.shape(spectral_array)) * cmosx0 #mm (mrad.nm⁻1 to rad.nm⁻1 was done with /1000)
+        lambda0 = np.median(spectral_array) 
+        self.echelle.__compute_exitAngle(wavelength_nm=lambda0, m_diffraction_order=diffraction_order_array[np.maximum(index_FSR-1,0)])
         cmosx = self.camera_lens.focal_length * angular_dispersion_array[np.maximum(index_FSR-1,0)]/1000 * (spectral_array - blaze_wavelength_array[np.maximum(index_FSR-1,0)]) + np.ones(np.shape(spectral_array)) * cmosx0 #mm (mrad.nm⁻1 to rad.nm⁻1 was done with /1000)
         
         return cmosx,diffraction_order_array[np.maximum(index_FSR-1,0)],blaze_wavelength_array[np.maximum(index_FSR-1,0)], angular_dispersion_array[np.maximum(index_FSR-1,0)], FSR_array[np.maximum(index_FSR-1,0)]
