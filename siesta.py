@@ -15,7 +15,8 @@ zyla = Camera_sensor(name="Andor Zyla", pixels_x=2160, pixels_y=2560, pixel_size
 ### Select center(s) of Echellograms, defined by the center wavelengths from spectral_range. By default, centered inside camera sensor. 
 
 # 1 spatial element
-centers_list = [(zyla.size_x_mm/2, zyla.size_y_mm/2)]
+# centers_list = [(zyla.size_x_mm/2, zyla.size_y_mm/2)]
+centers_list = [(5, 5)]
 # centers_list = [(cmosx_max/2,0.8*cmosy_max)]
 
 # >1 spatial elements
@@ -45,10 +46,3 @@ slit = Slit(name="slit", width=0.03, height=0.2) #mm @ZimMAIN 60" = 1.629 mm and
 if __name__ == "__main__":
     sowisp = Instrument(name="SOWISP", spectral_range=spectral_range, spatial_centers=centers_list, spectral_res_nm=spectral_res, echelle=ech, disperser=disp, camera_lens=camera, collimator_lens=collimator, slit=slit, camera_sensor=zyla, wavelength_scan_width_nm=0.02)
     sowisp.plotCD()
-
-
-
-
-
-
-

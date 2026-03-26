@@ -163,8 +163,11 @@ class EchelleGrating(Grating):
         FSR_nm = (np.ones(np.shape(blazewavelength_array)) * self.groove_density/1e6 * np.power(blazewavelength_array,2)) / (2 * np.sin(np.deg2rad(self.blaze_angle)*np.cos(np.deg2rad(self.semi_deviation_angle_deg))))
         return FSR_nm
 
-    def __compute_exitAngle(self, wavelength_nm: float, m_diffraction_order: int):
-        exit_angle_rad = np.arcsin(self.groove_density/1e6*self.diffraction_order*wavelength_nm - np.sin(np.deg2rad(self.blaze_angle + self.semi_deviation_angle_deg)))
+    def compute_exitAngle(self, wavelength_nm: float | np.ndarray, m_diffraction_order_array: np.ndarray | int, index_FSR: np.ndarray):
+        if np.isscalar(wavelength_nm) and np.isscalar(m_diffraction_order_array):
+            exit_angle_rad = np.arcsin(self.groove_density/1e6*m_diffraction_order_array*wavelength_nm - np.sin(np.deg2rad(self.blaze_angle + self.semi_deviation_angle_deg)))
+        else:
+            exit_angle_rad = np.arcsin(self.groove_density/1e6*m_diffraction_order_array[np.maximum(index_FSR-1,0)]*wavelength_nm - np.sin(np.deg2rad(self.blaze_angle + self.semi_deviation_angle_deg)))
         return exit_angle_rad
 
 class Camera_sensor(OpticalElement):
@@ -247,7 +250,7 @@ class Instrument(OpticalElement):
         
         return None
     
-    
+
     def exportDFmapping(self, df_mapping_list: list, filename: str) -> None:
         current_datetime = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
         for i, df_mapping in enumerate(df_mapping_list, start=1):
@@ -271,8 +274,12 @@ class Instrument(OpticalElement):
 
         # cmosx = self.camera_lens.focal_length * angular_dispersion_array[np.maximum(index_FSR-1,0)]/1000 * (spectral_array - blaze_wavelength_array[np.maximum(index_FSR-1,0)]) + np.ones(np.shape(spectral_array)) * cmosx0 #mm (mrad.nm⁻1 to rad.nm⁻1 was done with /1000)
         lambda0 = np.median(spectral_array) 
-        self.echelle.__compute_exitAngle(wavelength_nm=lambda0, m_diffraction_order=diffraction_order_array[np.maximum(index_FSR-1,0)])
-        cmosx = self.camera_lens.focal_length * angular_dispersion_array[np.maximum(index_FSR-1,0)]/1000 * (spectral_array - blaze_wavelength_array[np.maximum(index_FSR-1,0)]) + np.ones(np.shape(spectral_array)) * cmosx0 #mm (mrad.nm⁻1 to rad.nm⁻1 was done with /1000)
+        idx = np.argmin(np.abs(spectral_array - lambda0))
+        m0 = index_FSR[idx]
+        beta0_rad = self.echelle.compute_exitAngle(wavelength_nm=lambda0, m_diffraction_order_array=m0, index_FSR=index_FSR) #rad])
+        beta_rad_reduced = self.echelle.compute_exitAngle(wavelength_nm=spectral_array, m_diffraction_order_array=diffraction_order_array, index_FSR=index_FSR) - np.ones_like(spectral_array) * beta0_rad
+        
+        cmosx = self.camera_lens.focal_length * beta_rad_reduced + np.ones(np.shape(spectral_array)) * cmosx0 #mm 
         
         return cmosx,diffraction_order_array[np.maximum(index_FSR-1,0)],blaze_wavelength_array[np.maximum(index_FSR-1,0)], angular_dispersion_array[np.maximum(index_FSR-1,0)], FSR_array[np.maximum(index_FSR-1,0)]
     
