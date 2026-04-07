@@ -276,10 +276,16 @@ class Instrument(OpticalElement):
         lambda0 = np.median(spectral_array) 
         idx = np.argmin(np.abs(spectral_array - lambda0))
         m0 = index_FSR[idx]
-        beta0_rad = self.echelle.compute_exitAngle(wavelength_nm=lambda0, m_diffraction_order_array=m0, index_FSR=index_FSR) #rad])
-        beta_rad_reduced = self.echelle.compute_exitAngle(wavelength_nm=spectral_array, m_diffraction_order_array=diffraction_order_array, index_FSR=index_FSR) - np.ones_like(spectral_array) * beta0_rad
+        # beta0_rad = self.echelle.compute_exitAngle(wavelength_nm=lambda0, m_diffraction_order_array=m0, index_FSR=index_FSR) #rad])
+        beta0_rad = self.echelle.compute_exitAngle(wavelength_nm=float(np.squeeze(self.echelle.compute_blazewavelength(diffraction_order=np.array([m0])))), m_diffraction_order_array=m0, index_FSR=index_FSR) #rad 
+        # both betas are always of same sign
+        if beta0_rad < 0:
+            beta_rad_reduced = self.echelle.compute_exitAngle(wavelength_nm=spectral_array, m_diffraction_order_array=diffraction_order_array, index_FSR=index_FSR) + np.ones_like(spectral_array) * beta0_rad
+        else:
+            beta_rad_reduced = self.echelle.compute_exitAngle(wavelength_nm=spectral_array, m_diffraction_order_array=diffraction_order_array, index_FSR=index_FSR) - np.ones_like(spectral_array) * beta0_rad
+
         
-        cmosx = self.camera_lens.focal_length * beta_rad_reduced + np.ones(np.shape(spectral_array)) * cmosx0 #mm 
+        cmosx = self.camera_lens.focal_length * beta_rad_reduced + np.ones_like(spectral_array) * cmosx0 #mm 
         
         return cmosx,diffraction_order_array[np.maximum(index_FSR-1,0)],blaze_wavelength_array[np.maximum(index_FSR-1,0)], angular_dispersion_array[np.maximum(index_FSR-1,0)], FSR_array[np.maximum(index_FSR-1,0)]
     

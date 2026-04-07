@@ -15,8 +15,8 @@ zyla = Camera_sensor(name="Andor Zyla", pixels_x=2160, pixels_y=2560, pixel_size
 ### Select center(s) of Echellograms, defined by the center wavelengths from spectral_range. By default, centered inside camera sensor. 
 
 # 1 spatial element
-# centers_list = [(zyla.size_x_mm/2, zyla.size_y_mm/2)]
-centers_list = [(5, 5)]
+centers_list = [(zyla.size_x_mm/2, zyla.size_y_mm/2)]
+# centers_list = [(5, 5)]
 # centers_list = [(cmosx_max/2,0.8*cmosy_max)]
 
 # >1 spatial elements
@@ -39,7 +39,7 @@ disp = Grating(name="disperser", groove_density=300, alpha=18)
 # sf11 S coeffs: [2, 0.0, 1.7385, 0.0136, 0.311, 0.0616, 1.1749, 121.92] #First element 2 is to specify Sllemeir-2 formula
 # N-BK7 S coeffs: [2, 0.0, 1.12735, 0.0072, 0.1244, 0.0270, 0.827, 100.38] #First element 2 is to specify Sllemeir-2 formula
 # ZnSe S coeffs: [2, 3, 1.9, 0.113, 0.0, 0.0, 0.0, 0] #First element 2 is to specify Sllemeir-2 formula
-camera = Lens(name="camera", focal_length=130, diameter=50)
+camera = Lens(name="camera", focal_length=128, diameter=50)
 collimator = Lens(name="collimator", focal_length=217, diameter=50)
 slit = Slit(name="slit", width=0.03, height=0.2) #mm @ZimMAIN 60" = 1.629 mm and 5" = 0.136 mm, 1" = 27 um
 # slit = Slit(name="slit", width=0.492, height=5.905) #mm @SST 60" = 5.905 mm and 5" = 0.492 mm, 1" = 98.4 um
