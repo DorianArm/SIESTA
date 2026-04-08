@@ -296,6 +296,7 @@ class Instrument(OpticalElement):
         cmos_simulated_image_show.name = filename
         cmos_simulated_image_show.data = cmos_simulated_image
         cmos_simulated_image_show.showImage(save=True, vmin=0, vmax=1, path=path)
+        cv2.imwrite(os.path.join(path, filename + "_raw.png"), np.flipud(cmos_simulated_image)*255) #saving the image as png, multiplying by 255 to get values between 0 and 255 for uint8 format
         
         return None
 
