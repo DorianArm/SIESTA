@@ -45,4 +45,5 @@ slit = Slit(name="slit", width=0.03, height=0.2) #mm @ZimMAIN 60" = 1.629 mm and
 # slit = Slit(name="slit", width=0.492, height=5.905) #mm @SST 60" = 5.905 mm and 5" = 0.492 mm, 1" = 98.4 um
 if __name__ == "__main__":
     sowisp = Instrument(name="SOWISP", spectral_range=spectral_range, spatial_centers=centers_list, spectral_res_nm=spectral_res, echelle=ech, disperser=disp, camera_lens=camera, collimator_lens=collimator, slit=slit, camera_sensor=zyla, wavelength_scan_width_nm=0.02)
+    sowisp.exportAsImage(species="Neon", filename="neon_sowisp", path="./correlation_lab_siesta", spectral_range_nm=spectral_range)
     sowisp.plotCD()

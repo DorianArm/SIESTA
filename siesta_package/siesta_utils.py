@@ -1,5 +1,10 @@
 ###-------------------- Import Modules --------------------###
 from datetime import datetime
+from matplotlib import gridspec
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.ticker as ticker
+import matplotlib.pyplot as plt
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
@@ -11,7 +16,16 @@ from math import ceil, floor
 import pandas as pd
 import os.path
 import refractiveindex as ri
+import cv2
 
+import scienceplots
+
+import skimage
+
+
+plt.style.use('science')
+plt.style.use(['science','no-latex'])
+plt.rcParams["font.weight"] = "bold"
 
 
 ###-------------------- Classes --------------------###
@@ -250,7 +264,7 @@ class Instrument(OpticalElement):
         
         return None
     
-
+    # NEED TO BE TESTED
     def exportDFmapping(self, df_mapping_list: list, filename: str) -> None:
         current_datetime = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
         for i, df_mapping in enumerate(df_mapping_list, start=1):
@@ -258,6 +272,32 @@ class Instrument(OpticalElement):
         
         return None
     
+    def exportAsImage(self, species: str, filename: str, spectral_range_nm: tuple, path: str = ".") -> None:
+        if species not in self.__spectral_lines.keys():
+            print(f"Species {species} not found in spectral lines dictionary. Please check the available species and their respective wavelengths.")
+            return None
+        
+        wavelengths = np.array([wavelength for wavelength in self.__spectral_lines[species] if spectral_range_nm[0] <= wavelength <= spectral_range_nm[1]])
+        df_mapping_array = np.array([])
+        # df_mapping_array = np.zeros((len(wavelengths)*len(self.spatial_centers), 2))
+
+        for spatial_center in self.spatial_centers:
+            dataset = self.computeCD(spatial_center=spatial_center, isArrayDefined=True, defined_spectral_array=np.array(wavelengths), spectral_range_nm=(None, None), spectral_res_nm=None)
+            df_mapping = self.createDFmapping(dataset=dataset, spatial_center=spatial_center)
+            df_mapping = df_mapping["X"].to_frame().join(df_mapping["Y"])
+            df_mapping_array = np.concatenate((df_mapping_array, df_mapping.to_numpy()), axis=0) if df_mapping_array.size else df_mapping.to_numpy()
+        df_mapping_array_pixels = np.round(df_mapping_array / self.camera_sensor.px_size * 1000, decimals=0).astype(int) #mm to um to pixels
+        cmos_simulated_image = np.zeros((self.camera_sensor.px_y, self.camera_sensor.px_x))
+        cmos_simulated_image[df_mapping_array_pixels[:,1].astype(int), df_mapping_array_pixels[:,0].astype(int)] = 1 #setting the pixels corresponding to the spectral lines to 1
+        slit_size_cmos_pxl = [self.computeMagnification()[0] * self.slit.width / self.camera_sensor.px_size * 1000, self.computeMagnification()[1] * self.slit.height / self.camera_sensor.px_size * 1000] #mm to um to pixels
+        kernel_slit = np.ones((int(slit_size_cmos_pxl[1]), int(slit_size_cmos_pxl[0])), dtype=np.uint8) #kernel for dilation to simulate slit width on image
+        cmos_simulated_image = cv2.dilate(cmos_simulated_image, kernel_slit, iterations=1)
+        cmos_simulated_image_show = Data(path="", isFits=False)
+        cmos_simulated_image_show.name = filename
+        cmos_simulated_image_show.data = cmos_simulated_image
+        cmos_simulated_image_show.showImage(save=True, vmin=0, vmax=1, path=path)
+        
+        return None
 
     def __ComputeX(self, cmosx0: float, spectral_array: np.ndarray):
         
@@ -325,9 +365,12 @@ class Instrument(OpticalElement):
         return df_cmos
     
 
-    def computeCD(self,spectral_range_nm: tuple, spectral_res_nm: float, spatial_center: tuple):
+    def computeCD(self,spectral_range_nm: tuple, spectral_res_nm: float, spatial_center: tuple, isArrayDefined: bool = False, defined_spectral_array: np.ndarray = None):
         # definition of array of wavelengths to compute within spectral range and explicit definition of spatial center on cmos
-        spectral_array = np.arange(start=spectral_range_nm[0], stop=spectral_range_nm[1]+spectral_res_nm, step=spectral_res_nm)# in nm
+        if isArrayDefined == False:
+            spectral_array = np.arange(start=spectral_range_nm[0], stop=spectral_range_nm[1]+spectral_res_nm, step=spectral_res_nm)# in nm
+        else:
+            spectral_array = defined_spectral_array
         x0,y0 = spatial_center
         
         # slit size on cmos
@@ -689,4 +732,136 @@ class Instrument(OpticalElement):
         # Run the app
         app.run(debug=True,port=8050,jupyter_mode='tab') #jupyter_mode='tab' : opens automatically browser, 'external' not.
         
+
+class Data():
+    def __init__(self,path: str, isFits: bool=True) -> None:
+        self.path = path
+        self.name: str = path.split("/")[-1]
+        self.header: dict[str, str]
+        self.data: np.ndarray
+        if isFits:
+            self.header, self.data = self.load_data()
+        return None
+
+    def load_data(self) -> tuple[dict[str, str], np.ndarray]:
+        with fits.open(self.path) as file:
+            # isHduRead = False
+            # for hdu in file:
+            # header reading
+            # if hdu.header is not None and not isHduRead:
+            if file[0].header is not None:
+                header: dict[str, str] = dict(file[0].header)
+                # isHduRead = True
+            else:
+                raise ValueError("No header found in FITS file.")
+            # data reading
+            if file[0].data is not None:
+                if file[0].data.ndim == 2:
+                    data: np.ndarray = file[0].data
+            else:
+                raise ValueError("No data found in FITS file.")
+        return header, data
     
+    def showImage(self, figsize: tuple[int,int]=(8,8), fontsize: int=24, vmin: int=0, vmax: int=0, save: bool=False, path: str=None) -> tuple[plt.Figure, plt.Axes]:
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+        fig.suptitle(f"{self.name}", fontsize=fontsize, x=0.5, y=1.00, fontweight='bold')
+        ax.set_xlabel('X [pixels]')
+        ax.set_ylabel('Y [pixels]')
+
+        im = ax.imshow(self.data, cmap='gray', vmin=vmin, vmax=vmax, origin='lower')
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        cbar = fig.colorbar(im, cax=cax)
+        formatter = ticker.ScalarFormatter(useMathText=True)
+        formatter.set_scientific(True)
+        formatter.set_powerlimits((0, 0))
+        cbar.ax.yaxis.set_major_formatter(formatter)
+        cbar.set_label("Intensity [ADU]") 
+
+        ax.tick_params(color='white', labelcolor='black', which="major", length=8,width=1)
+        ax.tick_params(color='white', labelcolor='black', which="minor", length=4,width=1)
+        # big ticks
+        ax.xaxis.set_major_locator(MultipleLocator(1000))
+        ax.xaxis.set_major_formatter('{x:.0f}')
+
+        # For the minor ticks, use no labels; default NullFormatter.
+        ax.xaxis.set_minor_locator(MultipleLocator(200))
+
+        # Y-axis
+        ax.set_ylabel("Pixels",fontsize=20)
+        ax.tick_params(labelsize=20)
+
+
+        # big ticks
+        ax.yaxis.set_major_locator(MultipleLocator(1000))
+        ax.yaxis.set_major_formatter('{x:.0f}')
+
+        # For the minor ticks, use no labels; default NullFormatter.
+        ax.yaxis.set_minor_locator(MultipleLocator(200))
+        
+        if save:
+            fig.savefig(f"{os.path.join(path, self.name)}.png", dpi=300)
+        # fig.show()
+
+        return fig, ax
+    
+    def showYprofile(self, xpixel: int, figsize: tuple[int,int]=(8,8), fontsize: int=24, vmin: int=0, vmax: int=0, save: bool=False) -> None:
+        grid = gridspec.GridSpec(1,2, width_ratios=[1,1])
+        fig,ax = plt.figure(figsize=figsize), [plt.subplot(grid[0]), plt.subplot(grid[1])]
+        fig.suptitle(f"y={xpixel} profile of {self.name}", fontsize=fontsize, x=0.5, y=1.00, fontweight='bold')
+
+        ## Left plot: image with vertical line ##
+        ax[0].imshow(self.data, cmap='gray')
+        ax[0].set_xlabel('X [pixels]')
+        ax[0].set_ylabel('Y [pixels]')
+
+        im = ax[0].imshow(self.data, cmap='gray', vmin=vmin, vmax=vmax)
+        ax[0].axvline(x=xpixel, color='red', linestyle='--', linewidth=1)
+
+        ax[0].tick_params(color='white', labelcolor='black', which="major", length=8,width=1)
+        ax[0].tick_params(color='white', labelcolor='black', which="minor", length=4,width=1)
+        # big ticks
+        ax[0].xaxis.set_major_locator(MultipleLocator(1000))
+        ax[0].xaxis.set_major_formatter('{x:.0f}')
+
+        # For the minor ticks, use no labels; default NullFormatter.
+        ax[0].xaxis.set_minor_locator(MultipleLocator(200))
+        # Y-axis
+        ax[0].set_ylabel("Pixels",fontsize=20)
+        ax[0].tick_params(labelsize=20)
+
+        # big ticks
+        ax[0].yaxis.set_major_locator(MultipleLocator(1000))
+        ax[0].yaxis.set_major_formatter('{x:.0f}')
+        # For the minor ticks, use no labels; default NullFormatter.
+        ax[0].yaxis.set_minor_locator(MultipleLocator(200))
+        
+
+
+        ##-------- Right plot: Y profile at xpixel --------##
+        ax[1].plot(self.data[:, xpixel], color='black')
+
+        # ticks parameters
+        ax[1].tick_params(color='black', labelcolor='black', which="major", length=8,width=1)
+        ax[1].tick_params(color='black', labelcolor='black', which="minor", length=4,width=1)
+        ax[1].tick_params(labelsize=20)
+        
+        # X-axis parameters
+        ax[1].set_xlabel('Y [pixels]')
+        ax[1].xaxis.set_major_locator(MultipleLocator(1000))
+        ax[1].xaxis.set_major_formatter('{x:.0f}')
+        ax[1].xaxis.set_minor_locator(MultipleLocator(200))
+
+        # Y-axis parameters
+        ax[1].set_ylabel('Intensity [ADU]')
+        ax[1].yaxis.set_major_locator(MultipleLocator(50))
+        ax[1].yaxis.set_major_formatter('{x:.0f}')
+        ax[1].yaxis.set_minor_locator(MultipleLocator(10))
+
+        if save:
+            fig.savefig(f"{self.name}.png", dpi=300)
+        # fig.show()
+        
+    
+        return None    
