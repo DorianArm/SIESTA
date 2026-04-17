@@ -7,7 +7,8 @@ from siesta_package.siesta_utils import *
 spectral_range = (507, 875)
 
 ### Select camera sensor size
-#Emergent camera size
+#Emergent camera
+emergent = Camera_sensor(name="Emergent", pixels_x=5120, pixels_y=5120, pixel_size=2.5)
 
 # Andor Zyla
 zyla = Camera_sensor(name="Andor Zyla", pixels_x=2160, pixels_y=2560, pixel_size=6.5) #mm
@@ -15,7 +16,8 @@ zyla = Camera_sensor(name="Andor Zyla", pixels_x=2160, pixels_y=2560, pixel_size
 ### Select center(s) of Echellograms, defined by the center wavelengths from spectral_range. By default, centered inside camera sensor. 
 
 # 1 spatial element
-centers_list = [(zyla.size_x_mm/2, zyla.size_y_mm/2)]
+# centers_list = [(zyla.size_x_mm/2, zyla.size_y_mm/2)]
+centers_list = [(emergent.size_x_mm/2, emergent.size_y_mm/2)]
 # centers_list = [(5, 5)]
 # centers_list = [(cmosx_max/2,0.8*cmosy_max)]
 
@@ -29,7 +31,8 @@ centers_list = [(zyla.size_x_mm/2, zyla.size_y_mm/2)]
 spectral_res = 0.02 #nm, used for sampling spectral range.
 
 ### Select optical elements parameters ###
-ech = EchelleGrating(name="thorlabs echelle", groove_density=31.6, blaze_angle=63, semi_deviation_angle_deg=4.15)
+ech = EchelleGrating(name="thorlabs echelle", groove_density=31.6, blaze_angle=63, semi_deviation_angle_deg=7.5)
+
 # ech = EchelleGrating(name="thorlabs echelle", groove_density=110, blaze_angle=63, semi_deviation_angle_deg=7.5)
 disp = Grating(name="disperser", groove_density=300, alpha=18)
 # disp = Prism(name="disperser prism", glass_type=["main","CaF2","Li"], beam_diameter=20, base=100)
@@ -44,6 +47,7 @@ collimator = Lens(name="collimator", focal_length=217, diameter=50)
 slit = Slit(name="slit", width=0.03, height=0.2) #mm @ZimMAIN 60" = 1.629 mm and 5" = 0.136 mm, 1" = 27 um
 # slit = Slit(name="slit", width=0.492, height=5.905) #mm @SST 60" = 5.905 mm and 5" = 0.492 mm, 1" = 98.4 um
 if __name__ == "__main__":
-    sowisp = Instrument(name="SOWISP", spectral_range=spectral_range, spatial_centers=centers_list, spectral_res_nm=spectral_res, echelle=ech, disperser=disp, camera_lens=camera, collimator_lens=collimator, slit=slit, camera_sensor=zyla, wavelength_scan_width_nm=0.02)
-    # sowisp.exportAsImage(species="Neon", filename="neon_sowisp", path="./correlation_lab_siesta", spectral_range_nm=spectral_range)
+    sowisp = Instrument(name="SOWISP", spectral_range=spectral_range, spatial_centers=centers_list, spectral_res_nm=spectral_res, echelle=ech, disperser=disp, camera_lens=camera, collimator_lens=collimator, slit=slit, camera_sensor=emergent, wavelength_scan_width_nm=0.02)
+    # sowisp.exportAsImage(species="Neon", filename="neon_sowisp_emergent128mm", path="./correlation_lab_siesta", spectral_range_nm=spectral_range)
+    # sowisp.exportAsFits(species="Neon", filename="neon_sowisp_Emergent128mmpoint", path="./correlation_lab_siesta", spectral_range_nm=spectral_range)
     sowisp.plotCD()

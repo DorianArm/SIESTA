@@ -19,7 +19,7 @@ import refractiveindex as ri
 import cv2
 
 import scienceplots
-
+import astropy.io.fits as fits
 import skimage
 
 
@@ -274,7 +274,7 @@ class Instrument(OpticalElement):
     
     def exportAsImage(self, species: str, filename: str, spectral_range_nm: tuple, path: str = ".") -> None:
         if species not in self.__spectral_lines.keys():
-            print(f"Species {species} not found in spectral lines dictionary. Please check the available species and their respective wavelengths.")
+            raise ValueError(f"Species {species} not found in spectral lines dictionary. Please check the available species and their respective wavelengths.")
             return None
         
         wavelengths = np.array([wavelength for wavelength in self.__spectral_lines[species] if spectral_range_nm[0] <= wavelength <= spectral_range_nm[1]])
@@ -300,6 +300,52 @@ class Instrument(OpticalElement):
         
         return None
 
+    def exportAsFits(self, species: str, filename: str, spectral_range_nm: tuple, path: str = ".", wantSlitKernel: bool = False) -> None:
+        if species not in self.__spectral_lines.keys():
+            raise ValueError(f"Species {species} not found in spectral lines dictionary. Please check the available species and their respective wavelengths.")
+            
+        wavelengths = np.array([wavelength for wavelength in self.__spectral_lines[species] if spectral_range_nm[0] <= wavelength <= spectral_range_nm[1]])
+        df_mapping_array = np.array([])
+        # df_mapping_array = np.zeros((len(wavelengths)*len(self.spatial_centers), 2))
+
+        for spatial_center in self.spatial_centers:
+            dataset = self.computeCD(spatial_center=spatial_center, isArrayDefined=True, defined_spectral_array=np.array(wavelengths), spectral_range_nm=(None, None), spectral_res_nm=None)
+            df_mapping = self.createDFmapping(dataset=dataset, spatial_center=spatial_center)
+            df_mapping = df_mapping["X"].to_frame().join(df_mapping["Y"]).join(df_mapping["wavelengths"]).join(df_mapping["angular_dispersion_x[mrad/nm]"])
+            df_mapping_array = np.concatenate((df_mapping_array, df_mapping.to_numpy()), axis=0) if df_mapping_array.size else df_mapping.to_numpy()
+
+        # base image array
+        df_mapping_array_pixels = np.concatenate((np.round(df_mapping_array[:,:2] / self.camera_sensor.px_size * 1000, decimals=0).astype(int), df_mapping_array[:, 2:4]), axis=1) #mm to um to pixels + associated wavelengths + associated angulare dispersion in mrad/nm
+        cmos_simulated_image = np.zeros((self.camera_sensor.px_y, self.camera_sensor.px_x))
+        cmos_simulated_image[df_mapping_array_pixels[:,1].astype(int), df_mapping_array_pixels[:,0].astype(int)] = 1 #setting the pixels corresponding to the spectral lines to 1
+        
+        # creation of wavelength mask from simulated image
+        cmos_wavelength_mask = np.zeros((self.camera_sensor.px_y, self.camera_sensor.px_x))
+        cmos_wavelength_mask[df_mapping_array_pixels[:,1].astype(int), df_mapping_array_pixels[:,0].astype(int)] = df_mapping_array_pixels[:,2] # setting the pixels corresponding to the spectral lines to their associated wavelengths
+
+        cmos_dispersion_mask = np.zeros((self.camera_sensor.px_y, self.camera_sensor.px_x))
+        cmos_dispersion_mask[df_mapping_array_pixels[:,1].astype(int), df_mapping_array_pixels[:,0].astype(int)] = df_mapping_array_pixels[:,3] # setting the pixels corresponding to the spectral lines to their associated angular dispersion in mrad/nm
+        
+        if wantSlitKernel:
+            slit_size_cmos_pxl = [self.computeMagnification()[0] * self.slit.width / self.camera_sensor.px_size * 1000, self.computeMagnification()[1] * self.slit.height / self.camera_sensor.px_size * 1000] #mm to um to pixels
+            kernel_slit = np.ones((int(slit_size_cmos_pxl[1]), int(slit_size_cmos_pxl[0])), dtype=np.uint8) #kernel for dilation to simulate slit width on image
+            cmos_simulated_image = cv2.dilate(cmos_simulated_image, kernel_slit, iterations=1)
+            cmos_wavelength_mask = cv2.dilate(cmos_wavelength_mask, kernel_slit, iterations=1)
+            cmos_dispersion_mask = cv2.dilate(cmos_dispersion_mask, kernel_slit, iterations=1)
+        # FITS file creation
+        header_dict = {"target": species, "range_nm": spectral_range_nm}
+        header = fits.Header()
+        for key, value in header_dict.items():
+            header[key] = value
+        primary_hdu = fits.PrimaryHDU(data=None, header=header)
+        main_image_hdu = fits.ImageHDU(data=cmos_simulated_image, name="SIMULATED_IMAGE")
+        cmos_wavelength_mask_hdu = fits.ImageHDU(data=cmos_wavelength_mask, name="WAVELENGTH_MASK")
+        cmos_dispersion_mask_hdu = fits.ImageHDU(data=cmos_dispersion_mask, name="DISPERSION_MASK")
+        hdul = fits.HDUList([primary_hdu, main_image_hdu, cmos_wavelength_mask_hdu, cmos_dispersion_mask_hdu])
+        hdul.writeto(os.path.join(path, filename + ".fits"), overwrite=True)
+        
+        return None
+    
     def __ComputeX(self, cmosx0: float, spectral_array: np.ndarray):
         
         max_order = ceil(self.echelle.compute_diffractionorder(spectral_array[0]))
