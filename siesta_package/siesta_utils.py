@@ -265,9 +265,10 @@ class Instrument(OpticalElement):
         return None
     
     # NEED TO BE TESTED
-    def exportDFmapping(self, df_mapping_list: list, filename: str) -> None:
+    def exportDFmapping(self, df_mapping_list_indices: list, filename: str) -> None:
         current_datetime = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
-        for i, df_mapping in enumerate(df_mapping_list, start=1):
+        for i in df_mapping_list_indices:
+            df_mapping = self.df_mapping_list[i]
             df_mapping.to_csv(f"{filename}_spatial_{i}_{current_datetime}.csv", index=False, sep="\t")
         
         return None
