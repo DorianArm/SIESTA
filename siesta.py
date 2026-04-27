@@ -50,5 +50,5 @@ if __name__ == "__main__":
     sowisp = Instrument(name="SOWISP", spectral_range=spectral_range, spatial_centers=centers_list, spectral_res_nm=spectral_res, echelle=ech, disperser=disp, camera_lens=camera, collimator_lens=collimator, slit=slit, camera_sensor=emergent, wavelength_scan_width_nm=0.02)
     # sowisp.exportAsImage(species="Neon", filename="neon_sowisp_emergent128mm", path="./correlation_lab_siesta", spectral_range_nm=spectral_range)
     # sowisp.exportAsFits(species="Neon", filename="neon_sowisp_Emergent128mmpoint", path="./correlation_lab_siesta", spectral_range_nm=spectral_range)
-    sowisp.exportDFmapping(df_mapping_list_indices=[0],filename="./exports/sowisp_mapping_emergent128mm")
+    # sowisp.exportDFmapping(df_mapping_list_indices=[0],filename="./exports/sowisp_mapping_emergent128mm")
     sowisp.plotCD()

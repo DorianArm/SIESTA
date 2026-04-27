@@ -326,7 +326,7 @@ class Instrument(OpticalElement):
         for spatial_center in self.spatial_centers:
             dataset = self.computeCD(spatial_center=spatial_center, isArrayDefined=True, defined_spectral_array=np.array(wavelengths), spectral_range_nm=(None, None), spectral_res_nm=None)
             df_mapping = self.createDFmapping(dataset=dataset, spatial_center=spatial_center)
-            df_mapping = df_mapping["X"].to_frame().join(df_mapping["Y"]).join(df_mapping["wavelengths"]).join(df_mapping["angular_dispersion_x[mrad/nm]"])
+            df_mapping = df_mapping.loc[(df_mapping["X"] >= self.camera_sensor.size_x_mm) & (df_mapping["Y"] >= self.camera_sensor.size_y_mm),["X", "Y", "wavelengths", "angular_dispersion_x[mrad/nm]"]]
             df_mapping_array = np.concatenate((df_mapping_array, df_mapping.to_numpy()), axis=0) if df_mapping_array.size else df_mapping.to_numpy()
 
         # base image array
@@ -407,9 +407,9 @@ class Instrument(OpticalElement):
         # Compute Y position
         beta0_rad = self.disperser.compute_exitAngle(wavelength_nm=lambda0) #rad 
         if beta0_rad < 0:
-            beta_rad_reduced = self.disperser.compute_exitAngle(wavelength_nm=spectral_array) + np.ones_like(spectral_array) * beta0_rad
-        else:
             beta_rad_reduced = self.disperser.compute_exitAngle(wavelength_nm=spectral_array) - np.ones_like(spectral_array) * beta0_rad
+        else:
+            beta_rad_reduced = self.disperser.compute_exitAngle(wavelength_nm=spectral_array) + np.ones_like(spectral_array) * beta0_rad
 
         cmosy = self.camera_lens.focal_length * beta_rad_reduced + np.ones_like(spectral_array) * cmosy0 #mm
              
