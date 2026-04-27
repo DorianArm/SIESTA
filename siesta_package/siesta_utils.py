@@ -244,12 +244,13 @@ class Instrument(OpticalElement):
         # Neon I NIST spectral lines
         neon_lines = np.load("./NIST_Atomic-Specie/Neon.npy").squeeze().tolist()
         # Thorium I NIST spectral lines
-        thorium_lines = np.load("./NIST_Atomic-Specie/Thorium0.95.npy").squeeze().tolist()
+        thorium_lines = np.load("./NIST_Atomic-Specie/Thorium0.90.npy").squeeze().tolist()
         # Argon I NIST spectral lines
         argon_lines = np.load("./NIST_Atomic-Specie/Argon0.95.npy").squeeze().tolist()
+        eso_thar_lines = np.load("./NIST_Atomic-Specie/ESO_THAR.npy").squeeze().tolist()
 
 
-        self.__spectral_lines = {"Mg I b3 5167": [516.7] ,"Mg I b2 5172": [517.2] ,"Mg I b1 5183": [518.3] ,"Fe I 5250": [525.0],"Mn I 5399": [539.9], "He I D3 5876":[587.6], "Na I D2 5890": [589.0] ,"Na I D1 5896": [589.6],"Fe I 6173 (HMI)": [617.3], "Fe I 6301-6302": [630.15],"Ca I 6439": [643.9], "Ha": [656.3], "Ni I 6643": [664.3],"Fe I/Ca I 6718": [671.8],"K I 7699": [769.9],"Ca II 8498": [849.8], "Ca II 8542": [854.2],"Ca II 8662": [866.2], "Neon": neon_lines, "Thorium": thorium_lines, "Argon": argon_lines} #to be continued, rn only wl > 500 nm
+        self.__spectral_lines = {"Mg I b3 5167": [516.7] ,"Mg I b2 5172": [517.2] ,"Mg I b1 5183": [518.3] ,"Fe I 5250": [525.0],"Mn I 5399": [539.9], "He I D3 5876":[587.6], "Na I D2 5890": [589.0] ,"Na I D1 5896": [589.6],"Fe I 6173 (HMI)": [617.3], "Fe I 6301-6302": [630.15],"Ca I 6439": [643.9], "Ha": [656.3], "Ni I 6643": [664.3],"Fe I/Ca I 6718": [671.8],"K I 7699": [769.9],"Ca II 8498": [849.8], "Ca II 8542": [854.2],"Ca II 8662": [866.2], "Neon": neon_lines, "Thorium": thorium_lines, "Argon": argon_lines, "ESO_THAR": eso_thar_lines} #to be continued, rn only wl > 500 nm
 
         return self.__spectral_lines
 
@@ -302,13 +303,27 @@ class Instrument(OpticalElement):
         return None
 
     def exportAsFits(self, species: str, filename: str, spectral_range_nm: tuple, path: str = ".", wantSlitKernel: bool = False) -> None:
-        if species not in self.__spectral_lines.keys():
-            raise ValueError(f"Species {species} not found in spectral lines dictionary. Please check the available species and their respective wavelengths.")
-            
-        wavelengths = np.array([wavelength for wavelength in self.__spectral_lines[species] if spectral_range_nm[0] <= wavelength <= spectral_range_nm[1]])
-        df_mapping_array = np.array([])
+        if isinstance(species, str):
+            species_list = [species]
+        elif isinstance(species, list):
+            species_list = species
+        else:
+            raise TypeError("species must be a string or a list of strings")
+        
+        missing = [sp for sp in species_list if sp not in self.__spectral_lines]
+        if missing:
+            raise ValueError(f"Species not found: {missing}")
+        wavelengths = []
+        for sp in species_list:
+            wl = [
+                wavelength for wavelength in self.__spectral_lines[sp]
+                if spectral_range_nm[0] <= wavelength <= spectral_range_nm[1]
+            ]
+            wavelengths.extend(wl)
+        wavelengths.sort()
+        wavelengths = np.array(wavelengths)
         # df_mapping_array = np.zeros((len(wavelengths)*len(self.spatial_centers), 2))
-
+        df_mapping_array = np.array([])
         for spatial_center in self.spatial_centers:
             dataset = self.computeCD(spatial_center=spatial_center, isArrayDefined=True, defined_spectral_array=np.array(wavelengths), spectral_range_nm=(None, None), spectral_res_nm=None)
             df_mapping = self.createDFmapping(dataset=dataset, spatial_center=spatial_center)
@@ -334,7 +349,7 @@ class Instrument(OpticalElement):
             cmos_wavelength_mask = cv2.dilate(cmos_wavelength_mask, kernel_slit, iterations=1)
             cmos_dispersion_mask = cv2.dilate(cmos_dispersion_mask, kernel_slit, iterations=1)
         # FITS file creation
-        header_dict = {"target": species, "range_nm": spectral_range_nm}
+        header_dict = {"target": ",".join(species_list), "range_nm": str(spectral_range_nm)}
         header = fits.Header()
         for key, value in header_dict.items():
             header[key] = value
