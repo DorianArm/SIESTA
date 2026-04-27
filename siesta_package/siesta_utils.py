@@ -77,15 +77,23 @@ class Grating(OpticalElement):
         else:
             print("diffraction order is not possible")
         return A
+    
+    def compute_exitAngle(self, wavelength_nm: float | np.ndarray):
+    
+        exit_angle_rad = np.arcsin(self.groove_density/1e6*self.diffraction_order*wavelength_nm - np.sin(np.deg2rad(self.alpha)))
+        
+        return exit_angle_rad
 
 # Class for prisms
 class Prism(OpticalElement):
 
-    def __init__(self, name: str, glass_type: list, beam_diameter: float, base:float, manual: bool = False):
+    def __init__(self, name: str, glass_type: list, beam_diameter: float, base:float, apex_angle_deg: float, input_angle_deg: float, manual: bool = False):
         super().__init__(name)
         self.glass_type = glass_type #expected as in refractiveindex database : [shelf, book, page]
         self.beam_diameter= beam_diameter  # in mm
         self.base = base # base length in mm
+        self.apex_angle_deg = apex_angle_deg
+        self.input_angle_deg = input_angle_deg
         self.manual = manual
 
     
@@ -146,6 +154,13 @@ class Prism(OpticalElement):
     def compute_angularDisp(self,wavelength_nm: np.ndarray):
         A = self.base / self.beam_diameter * self.DerivativeNwl_per_um(wavelengths_nm=wavelength_nm) #rad/um or mrad/nm
         return A 
+    
+    def compute_exitAngle(self, wavelength_nm: float | np.ndarray):
+        
+        n = self.Sellmeier(coeffs=self.GetScoeffs(), wavelengths_nm=wavelength_nm)
+        exit_angle_rad = np.arcsin(n * np.sin(np.arcsin(np.sin(np.deg2rad(self.input_angle_deg))/n) - np.deg2rad(self.apex_angle_deg)))
+        
+        return exit_angle_rad
 
     
 
@@ -265,7 +280,6 @@ class Instrument(OpticalElement):
         
         return None
     
-    # NEED TO BE TESTED
     def exportDFmapping(self, df_mapping_list_indices: list, filename: str) -> None:
         current_datetime = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
         for i in df_mapping_list_indices:
@@ -327,7 +341,7 @@ class Instrument(OpticalElement):
         for spatial_center in self.spatial_centers:
             dataset = self.computeCD(spatial_center=spatial_center, isArrayDefined=True, defined_spectral_array=np.array(wavelengths), spectral_range_nm=(None, None), spectral_res_nm=None)
             df_mapping = self.createDFmapping(dataset=dataset, spatial_center=spatial_center)
-            df_mapping = df_mapping["X"].to_frame().join(df_mapping["Y"]).join(df_mapping["wavelengths"]).join(df_mapping["angular_dispersion_x[mrad/nm]"])
+            df_mapping = df_mapping.loc[(df_mapping["X"] >= self.camera_sensor.size_x_mm) & (df_mapping["Y"] >= self.camera_sensor.size_y_mm),["X", "Y", "wavelengths", "angular_dispersion_x[mrad/nm]"]]
             df_mapping_array = np.concatenate((df_mapping_array, df_mapping.to_numpy()), axis=0) if df_mapping_array.size else df_mapping.to_numpy()
 
         # base image array
@@ -396,18 +410,23 @@ class Instrument(OpticalElement):
     def __ComputeY(self, cmosy0: float, spectral_array: np.ndarray):
         
         # center wavelength of spectral_array
-        lambda0 = (spectral_array[-1] + spectral_array[0]) / 2 
-        # differential spectral array with respect to center wavelength
-        dspectral_array = spectral_array - np.ones(np.shape(spectral_array)) * lambda0
+        lambda0 = np.median(spectral_array)
         
-        #optical system computations
-        if self.disperser.__class__.__name__ == "Prism":
-            Ac = self.disperser.compute_angularDisp(wavelength_nm=spectral_array) /1000 #mrad.nm⁻1 to rad.nm⁻1
-            
-        else:
+        # Compute Y dispersion on cmos for information purpose
+        if isinstance(self.disperser, Grating):
+            dspectral_array = spectral_array - lambda0
             Ac = self.disperser.compute_angularDisp(wavelength_nm=dspectral_array) /1000 #mrad.nm⁻1 to rad.nm⁻1
-        #computation y coordinate
-        cmosy = np.ones(np.shape(dspectral_array))* cmosy0 + self.camera_lens.focal_length * Ac * dspectral_array
+        elif isinstance(self.disperser, Prism):
+            Ac = self.disperser.compute_angularDisp(wavelength_nm=spectral_array) /1000 #mrad.nm⁻1 to rad.nm⁻1
+
+        # Compute Y position
+        beta0_rad = self.disperser.compute_exitAngle(wavelength_nm=lambda0) #rad 
+        if beta0_rad < 0:
+            beta_rad_reduced = self.disperser.compute_exitAngle(wavelength_nm=spectral_array) - np.ones_like(spectral_array) * beta0_rad
+        else:
+            beta_rad_reduced = self.disperser.compute_exitAngle(wavelength_nm=spectral_array) + np.ones_like(spectral_array) * beta0_rad
+
+        cmosy = self.camera_lens.focal_length * beta_rad_reduced + np.ones_like(spectral_array) * cmosy0 #mm
              
         return cmosy, Ac
     
