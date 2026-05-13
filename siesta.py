@@ -4,7 +4,7 @@ from siesta_package.siesta_utils import *
 #-------- Main App --------#
 
 ### Select spectral range in nm
-spectral_range = (507, 875)
+spectral_range = (400, 875)
 
 ### Select camera sensor size
 # #Emergent camera
@@ -25,6 +25,12 @@ centers_list = [(asi294.size_x_mm/2, asi294.size_y_mm/2)]
 # centers_list = [(cmosx_max/2,0.8*cmosy_max)]
 
 # >1 spatial elements
+# shift_x = 0.1 #mm shift in x from initial position
+# shift_y = 0.1 #mm shift in y from initial position
+# centers_list = [(asi294.size_x_mm/2, asi294.size_y_mm/2 + shift_y), (asi294.size_x_mm/2, asi294.size_y_mm/2 - shift_y)]
+
+
+
 # centers_list = [(cmosx_max/4,cmosy_max/2),(3/4*cmosx_max,cmosy_max/2)]
 # centers_list = [(cmosx_max/2,0.505*cmosy_max),(cmosx_max/2,cmosy_max/2)]
 # centers_list = [(cmosx_max/2,cmosy_max/4),(cmosx_max/2,3/4*cmosy_max)]
@@ -34,17 +40,21 @@ centers_list = [(asi294.size_x_mm/2, asi294.size_y_mm/2)]
 spectral_res = 0.02 #nm, used for sampling spectral range.
 
 ### Select optical elements parameters ###
-ech = EchelleGrating(name="thorlabs echelle", groove_density=31.6, blaze_angle=63, semi_deviation_angle_deg=7.5)
+ech = EchelleGrating(name="thorlabs echelle", groove_density=31.6, blaze_angle=63, semi_deviation_angle_deg=3.5)
 
-# ech = EchelleGrating(name="thorlabs echelle", groove_density=110, blaze_angle=63, semi_deviation_angle_deg=7.5)
-disp = Grating(name="disperser", groove_density=300, alpha=18)
-# disp = Prism(name="disperser prism", glass_type=["main","CaF2","Li"], beam_diameter=20, base=100)
-# disp_prism = Prism(name="disperser prism", glass_type=["specs","SCHOTT-optical","SF11"], beam_diameter=15, base=25,manual=True) #sf11 manual prism
+# current disperser v0
+# disp = Grating(name="disperser", groove_density=300, alpha=18)
+disp = Prism(name="disperser prism", glass_type=["main","CaF2","Li"], beam_diameter=20, base=50, apex_angle_deg=60, input_angle_deg=25, manual=False) #CaF2-Li manual prism
+
+# disp = Prism(name="disperser prism", glass_type=["specs","SCHOTT-optical","SF11"], beam_diameter=20, base=50, apex_angle_deg=60, input_angle_deg=48, manual=False) #sf11 manual prism
 # disp_prism = Prism(name="disperser prism", glass_type=["specs","SCHOTT-optical","BK7"], beam_diameter=15, base=25,manual=True) #sf11 manual prism
 # disp = Prism(name="disperser prism", glass_type=["main","ZnSe","Marple"], beam_diameter=15, base=5,manual=False) #sf11 manual prism
 # sf11 S coeffs: [2, 0.0, 1.7385, 0.0136, 0.311, 0.0616, 1.1749, 121.92] #First element 2 is to specify Sllemeir-2 formula
 # N-BK7 S coeffs: [2, 0.0, 1.12735, 0.0072, 0.1244, 0.0270, 0.827, 100.38] #First element 2 is to specify Sllemeir-2 formula
 # ZnSe S coeffs: [2, 3, 1.9, 0.113, 0.0, 0.0, 0.0, 0] #First element 2 is to specify Sllemeir-2 formula
+
+
+
 camera = Lens(name="camera", focal_length=128, diameter=50)
 collimator = Lens(name="collimator", focal_length=217, diameter=50)
 slit = Slit(name="slit", width=0.03, height=0.2) #mm @ZimMAIN 60" = 1.629 mm and 5" = 0.136 mm, 1" = 27 um
@@ -52,7 +62,7 @@ slit = Slit(name="slit", width=0.03, height=0.2) #mm @ZimMAIN 60" = 1.629 mm and
 if __name__ == "__main__":
     sowisp = Instrument(name="SOWISP", spectral_range=spectral_range, spatial_centers=centers_list, spectral_res_nm=spectral_res, echelle=ech, disperser=disp, camera_lens=camera, collimator_lens=collimator, slit=slit, camera_sensor=asi294, wavelength_scan_width_nm=0.02)
     # sowisp.exportAsImage(species="Thorium", filename="Thorium_sowisp_ASI294MMPro", path="./correlation_lab_siesta", spectral_range_nm=spectral_range)
-    sowisp.exportAsFits(species=["ESO_THAR"], filename="ThAr_sowisp_ASI294MMPro_noslit_ESO", path="./correlation_lab_siesta", spectral_range_nm=spectral_range, wantSlitKernel=False)
+    # sowisp.exportAsFits(species=["Neon"], filename="Neon_sowisp_Zyla_slit_ESOv2", path="./correlation_lab_siesta", spectral_range_nm=spectral_range, wantSlitKernel=True)
     # sowisp.exportAsFits(species=["Thorium"], filename="Thorium_sowisp_ASI294MMPro_slit", path="./correlation_lab_siesta", spectral_range_nm=spectral_range, wantSlitKernel=True)
     # sowisp.exportDFmapping(df_mapping_list_indices=[0],filename="./exports/sowisp_mapping_asi294mm")
     sowisp.plotCD()

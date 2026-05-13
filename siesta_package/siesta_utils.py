@@ -158,7 +158,8 @@ class Prism(OpticalElement):
     def compute_exitAngle(self, wavelength_nm: float | np.ndarray):
         
         n = self.Sellmeier(coeffs=self.GetScoeffs(), wavelengths_nm=wavelength_nm)
-        exit_angle_rad = np.arcsin(n * np.sin(np.arcsin(np.sin(np.deg2rad(self.input_angle_deg))/n) - np.deg2rad(self.apex_angle_deg)))
+        # exit_angle_rad = np.arcsin(n * np.sin(np.arcsin(np.sin(np.deg2rad(self.input_angle_deg))/n) - np.deg2rad(self.apex_angle_deg)))
+        exit_angle_rad = np.deg2rad(self.apex_angle_deg) - np.deg2rad(self.input_angle_deg)  - np.arcsin(np.sqrt(n**2 - np.sin(np.deg2rad(self.input_angle_deg))**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(np.deg2rad(self.input_angle_deg)))
         
         return exit_angle_rad
 
@@ -341,7 +342,7 @@ class Instrument(OpticalElement):
         for spatial_center in self.spatial_centers:
             dataset = self.computeCD(spatial_center=spatial_center, isArrayDefined=True, defined_spectral_array=np.array(wavelengths), spectral_range_nm=(None, None), spectral_res_nm=None)
             df_mapping = self.createDFmapping(dataset=dataset, spatial_center=spatial_center)
-            df_mapping = df_mapping.loc[(df_mapping["X"] >= self.camera_sensor.size_x_mm) & (df_mapping["Y"] >= self.camera_sensor.size_y_mm),["X", "Y", "wavelengths", "angular_dispersion_x[mrad/nm]"]]
+            df_mapping = df_mapping.loc[(df_mapping["X"] <= self.camera_sensor.size_x_mm) & (df_mapping["Y"] <= self.camera_sensor.size_y_mm),["X", "Y", "wavelengths", "angular_dispersion_x[mrad/nm]"]]
             df_mapping_array = np.concatenate((df_mapping_array, df_mapping.to_numpy()), axis=0) if df_mapping_array.size else df_mapping.to_numpy()
 
         # base image array
@@ -550,6 +551,7 @@ class Instrument(OpticalElement):
         slit_width_cmos, slit_height_cmos = self.df_mapping_list[0]["Slit width [um]"].iloc[0]/1000, self.df_mapping_list[0]["Slit height [um]"].iloc[0]/1000 #um to mm 
         #-----Plotting Parameters------#
         lines = list(self.__spectral_lines.keys())
+        #to repair
         selection_spectral_windows = {
                                         k: pd.concat(
                                             [
@@ -561,7 +563,7 @@ class Instrument(OpticalElement):
                                             ]
                                         )
                                         for k, v_list in self.__spectral_lines.items()
-                                    }
+                                    } 
 
         #-----Actual Plotting------#
         app = dash.Dash(__name__)
