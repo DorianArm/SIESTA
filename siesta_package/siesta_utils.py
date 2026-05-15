@@ -87,16 +87,24 @@ class Grating(OpticalElement):
 # Class for prisms
 class Prism(OpticalElement):
 
-    def __init__(self, name: str, glass_type: list, beam_diameter: float, base:float, apex_angle_deg: float, input_angle_deg: float, manual: bool = False):
+    def __init__(self, name: str, glass_type: list, beam_diameter: float, base:float, apex_angle_deg: float, input_angle_deg: float, prev: Prism = None, manual: bool = False, spectral_range_nm: tuple = None, spectral_res_nm: float = None):
         super().__init__(name)
         self.glass_type = glass_type #expected as in refractiveindex database : [shelf, book, page]
         self.beam_diameter= beam_diameter  # in mm
         self.base = base # base length in mm
         self.apex_angle_deg = apex_angle_deg
         self.input_angle_deg = input_angle_deg
+        self.input_angle_rad = None
         self.manual = manual
+        self.prev = prev
+        self.wavelength_nm = np.arange(spectral_range_nm[0], spectral_range_nm[1] + spectral_res_nm, spectral_res_nm) if spectral_range_nm is not None and spectral_res_nm is not None else None
 
-    
+        if self.prev is not None:
+            self.prev.compute_exitAngle(wavelength_nm=self.wavelength_nm)
+            input_angle_rad = np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.input_angle_deg) - self.prev.exit_angle_rad + np.deg2rad(self.apex_angle_deg/2)#prev.apex/2 + self.apexangle/2
+            self.input_angle_rad = input_angle_rad
+
+
     def __str__(self):
         return f"Prism: {self.name}, Base length [mm]: {self.base}, Beam diameter [mm]: {self.beam_diameter}, Glass Type: Shelf={self.glass_type[0]},Book={self.glass_type[1]},Page={self.glass_type[2]}"
     
@@ -158,9 +166,18 @@ class Prism(OpticalElement):
     def compute_exitAngle(self, wavelength_nm: float | np.ndarray):
         
         n = self.Sellmeier(coeffs=self.GetScoeffs(), wavelengths_nm=wavelength_nm)
-        # exit_angle_rad = np.arcsin(n * np.sin(np.arcsin(np.sin(np.deg2rad(self.input_angle_deg))/n) - np.deg2rad(self.apex_angle_deg)))
-        exit_angle_rad = np.deg2rad(self.apex_angle_deg) - np.deg2rad(self.input_angle_deg)  - np.arcsin(np.sqrt(n**2 - np.sin(np.deg2rad(self.input_angle_deg))**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(np.deg2rad(self.input_angle_deg)))
-        
+        if self.input_angle_rad is not None:
+            if np.isscalar(wavelength_nm):
+                idx_wl = np.where(self.wavelength_nm == wavelength_nm)[0]
+                exit_angle_rad = np.deg2rad(self.apex_angle_deg) - self.input_angle_rad[idx_wl]  - np.arcsin(np.sqrt(n**2 - np.sin(self.input_angle_rad[idx_wl])**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(self.input_angle_rad[idx_wl]))
+            else:
+                exit_angle_rad = np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg) - self.input_angle_rad  - np.arcsin(np.sqrt(n**2 - np.sin(self.input_angle_rad)**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(self.input_angle_rad))
+                self.exit_angle_rad = exit_angle_rad
+
+        else:
+            # exit_angle_rad = np.arcsin(n * np.sin(np.arcsin(np.sin(np.deg2rad(self.input_angle_deg))/n) - np.deg2rad(self.apex_angle_deg)))
+            exit_angle_rad = np.deg2rad(self.apex_angle_deg) - np.deg2rad(self.input_angle_deg)  - np.arcsin(np.sqrt(n**2 - np.sin(np.deg2rad(self.input_angle_deg))**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(np.deg2rad(self.input_angle_deg)))
+            self.exit_angle_rad = exit_angle_rad
         return exit_angle_rad
 
     
@@ -422,6 +439,7 @@ class Instrument(OpticalElement):
 
         # Compute Y position
         beta0_rad = self.disperser.compute_exitAngle(wavelength_nm=lambda0) #rad 
+        print(beta0_rad)
         if beta0_rad < 0:
             beta_rad_reduced = self.disperser.compute_exitAngle(wavelength_nm=spectral_array) - np.ones_like(spectral_array) * beta0_rad
         else:
