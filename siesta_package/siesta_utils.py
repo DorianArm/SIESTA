@@ -101,7 +101,10 @@ class Prism(OpticalElement):
 
         if self.prev is not None:
             self.prev.compute_exitAngle(wavelength_nm=self.wavelength_nm)
-            input_angle_rad = np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.input_angle_deg) - self.prev.exit_angle_rad + np.deg2rad(self.apex_angle_deg/2)#prev.apex/2 + self.apexangle/2
+            input_angle_rad =  np.deg2rad(self.apex_angle_deg)/2 - np.deg2rad(self.input_angle_deg)  + np.deg2rad(self.prev.apex_angle_deg/2) + self.prev.exit_angle_rad
+            # input_angle_rad = np.pi - np.deg2rad(self.input_angle_deg) + np.deg2rad(self.apex_angle_deg)/2 - np.deg2rad(self.prev.apex_angle_deg/2) - self.prev.exit_angle_rad
+            # print(f"Input angle in rad for {self.name} computed from previous prism exit angle: {input_angle_rad}")
+            # input_angle_rad = np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.input_angle_deg) - self.prev.exit_angle_rad + np.deg2rad(self.apex_angle_deg/2)#prev.apex/2 + self.apexangle/2
             self.input_angle_rad = input_angle_rad
 
 
@@ -168,15 +171,21 @@ class Prism(OpticalElement):
         n = self.Sellmeier(coeffs=self.GetScoeffs(), wavelengths_nm=wavelength_nm)
         if self.input_angle_rad is not None:
             if np.isscalar(wavelength_nm):
-                idx_wl = np.where(self.wavelength_nm == wavelength_nm)[0]
-                exit_angle_rad = np.deg2rad(self.apex_angle_deg) - self.input_angle_rad[idx_wl]  - np.arcsin(np.sqrt(n**2 - np.sin(self.input_angle_rad[idx_wl])**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(self.input_angle_rad[idx_wl]))
+                idx_wl = np.argmin(np.abs(self.wavelength_nm - wavelength_nm))
+                # exit_angle_rad = np.deg2rad(self.apex_angle_deg) - self.input_angle_rad[idx_wl]  - np.arcsin(np.sqrt(n**2 - np.sin(self.input_angle_rad[idx_wl])**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(self.input_angle_rad[idx_wl]))
+                exit_angle_rad = -1 * np.arcsin(n * np.sin(np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(self.input_angle_rad[idx_wl])/n) ))
+
             else:
-                exit_angle_rad = np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg) - self.input_angle_rad  - np.arcsin(np.sqrt(n**2 - np.sin(self.input_angle_rad)**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(self.input_angle_rad))
+                # exit_angle_rad = np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg) - self.input_angle_rad  - np.arcsin(np.sqrt(n**2 - np.sin(self.input_angle_rad)**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(self.input_angle_rad))
+                exit_angle_rad = -1 * np.arcsin(n * np.sin(np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(self.input_angle_rad)/n) ))
+                # exit_angle_rad = np.arcsin(n * np.sin(np.arcsin(np.sin(np.deg2rad(self.input_angle_rad))/n) - np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg)))
+                print(f"input angle in rad for {self.name} : {self.input_angle_rad[0]}, n={n[0]}, exit angle: {exit_angle_rad[0]}")
                 self.exit_angle_rad = exit_angle_rad
 
         else:
-            # exit_angle_rad = np.arcsin(n * np.sin(np.arcsin(np.sin(np.deg2rad(self.input_angle_deg))/n) - np.deg2rad(self.apex_angle_deg)))
-            exit_angle_rad = np.deg2rad(self.apex_angle_deg) - np.deg2rad(self.input_angle_deg)  - np.arcsin(np.sqrt(n**2 - np.sin(np.deg2rad(self.input_angle_deg))**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(np.deg2rad(self.input_angle_deg)))
+            # exit_angle_rad = np.arcsin(n * np.sin(np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(self.input_angle_rad)/n) ))
+            exit_angle_rad = -1 * np.arcsin(n * np.sin(np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(np.deg2rad(self.input_angle_deg))/n)))
+            # exit_angle_rad = np.deg2rad(self.apex_angle_deg) - np.deg2rad(self.input_angle_deg)  - np.arcsin(np.sqrt(n**2 - np.sin(np.deg2rad(self.input_angle_deg))**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(np.deg2rad(self.input_angle_deg)))
             self.exit_angle_rad = exit_angle_rad
         return exit_angle_rad
 
@@ -569,19 +578,22 @@ class Instrument(OpticalElement):
         slit_width_cmos, slit_height_cmos = self.df_mapping_list[0]["Slit width [um]"].iloc[0]/1000, self.df_mapping_list[0]["Slit height [um]"].iloc[0]/1000 #um to mm 
         #-----Plotting Parameters------#
         lines = list(self.__spectral_lines.keys())
-        #to repair
-        selection_spectral_windows = {
-                                        k: pd.concat(
-                                            [
-                                                self.df_mapping_list[0].loc[
-                                                    (self.df_mapping_list[0]["wavelengths"] <= v + self.wavelength_scan_width_nm / 2) &
-                                                    (self.df_mapping_list[0]["wavelengths"] >= v - self.wavelength_scan_width_nm / 2)
-                                                ]
-                                                for v in v_list
-                                            ]
-                                        )
-                                        for k, v_list in self.__spectral_lines.items()
-                                    } 
+        
+        selection_spectral_windows = [
+            {
+                k: pd.concat(
+                    [
+                        df_mapping.loc[
+                            (df_mapping["wavelengths"] <= v + self.wavelength_scan_width_nm / 2) &
+                            (df_mapping["wavelengths"] >= v - self.wavelength_scan_width_nm / 2)
+                        ]
+                        for v in v_list
+                    ]
+                )
+                for k, v_list in self.__spectral_lines.items()
+            }
+            for df_mapping in self.df_mapping_list
+        ]
 
         #-----Actual Plotting------#
         app = dash.Dash(__name__)
@@ -595,12 +607,12 @@ class Instrument(OpticalElement):
     ], style={'marginTop': '10px',"marginBottom": '10px'}),
             dcc.Dropdown(
                 id='group-selector',
-                options=[{'label': k, 'value': k} for k in selection_spectral_windows.keys()],
+                options=[{'label': k, 'value': k} for k in selection_spectral_windows[0].keys()],
                 multi=True,
                 placeholder="Select lines to highlight"
             ),
 
-            dcc.Graph(id='grid-plot', config={'displayModeBar': False}),
+            dcc.Graph(id='grid-plot', config={'displayModeBar': True}),
             
 
             html.Div(id='meta-info', style={'marginTop': '20px', 'fontSize': '16px'})
@@ -760,7 +772,7 @@ class Instrument(OpticalElement):
                         )
                     for group in selected_groups:
                         
-                        df_sel = selection_spectral_windows[group]
+                        df_sel = selection_spectral_windows[i-1][group]
                         hovertexts_hl = [
                         f"Wavelength: {wl}<br>Echelle order: {order}<br>Max resolution [A]: {10 * res}<br>Max R: {R}<br>Slit [um](x, y): ({slit_x:.0f}, {slit_y:.0f})"
                         for wl, order, res, R, slit_x, slit_y in zip(
@@ -803,7 +815,7 @@ class Instrument(OpticalElement):
                     x=self.df_cmos["X"],
                     y=self.df_cmos["Y"],
                     mode="lines",
-                    name=f"{self.camera_sensor.name}: {self.camera_sensor.size_x_mm}x{self.camera_sensor.size_y_mm}mm",
+                    name=f"{self.camera_sensor.name}: {self.camera_sensor.size_x_mm:.2f}x{self.camera_sensor.size_y_mm:.2f}mm",
                     line=dict(color="red", width=2)
                 )
 

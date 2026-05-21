@@ -20,14 +20,14 @@ asi294 = Camera_sensor(name="ZWO ASI294MM Pro", pixels_x=5644, pixels_y=8288, pi
 
 # 1 spatial element
 # centers_list = [(zyla.size_x_mm/2, zyla.size_y_mm/2)]
-centers_list = [(asi294.size_x_mm/2, 3/4*asi294.size_y_mm)]
+# centers_list = [(asi294.size_x_mm/2, 3/4*asi294.size_y_mm)]
 # centers_list = [(5, 5)]
 # centers_list = [(cmosx_max/2,0.8*cmosy_max)]
 
 # >1 spatial elements
-# shift_x = 0.1 #mm shift in x from initial position
-# shift_y = 0.075 #mm shift in y from initial position
-# centers_list = [(asi294.size_x_mm/2, 3/4*asi294.size_y_mm + shift_y), (asi294.size_x_mm/2, 3/4*asi294.size_y_mm - shift_y)]
+shift_x = 0.1 #mm shift in x from initial position
+shift_y = 0.075 #mm shift in y from initial position
+centers_list = [(asi294.size_x_mm/2, 3/4*asi294.size_y_mm + shift_y), (asi294.size_x_mm/2, 3/4*asi294.size_y_mm - shift_y)]
 
 
 
@@ -40,14 +40,14 @@ centers_list = [(asi294.size_x_mm/2, 3/4*asi294.size_y_mm)]
 spectral_res = 0.02 #nm, used for sampling spectral range.
 
 ### Select optical elements parameters ###
-ech = EchelleGrating(name="thorlabs echelle", groove_density=32, blaze_angle=63, semi_deviation_angle_deg=0.5)
+ech = EchelleGrating(name="thorlabs echelle", groove_density=31.6, blaze_angle=63, semi_deviation_angle_deg=3.375)
 
 # current disperser v0
-# disp = Grating(name="disperser", groove_density=300, alpha=18)
-disp = Prism(name="disperser prism", glass_type=["main","CaF2","Li"], beam_diameter=20, base=50, apex_angle_deg=60, input_angle_deg=25, manual=False, spectral_range_nm=spectral_range, spectral_res_nm=spectral_res) #CaF2-Li manual prism
-disp2 = Prism(name="second disperser prism", glass_type=["main","CaF2","Li"], beam_diameter=20, base=50, apex_angle_deg=60, input_angle_deg=60, prev=disp, manual=False, spectral_range_nm=spectral_range, spectral_res_nm=spectral_res) #CaF2-Li manual prism
-# disp = Prism(name="disperser prism", glass_type=["specs","SCHOTT-optical","N-SF2"], beam_diameter=20, base=50, apex_angle_deg=60, input_angle_deg=38, manual=False, spectral_range_nm=spectral_range, spectral_res_nm=spectral_res) #sf11 manual prism
-# disp2 = Prism(name="disperser prism 2", glass_type=["specs","SCHOTT-optical","N-SF2"], beam_diameter=20, base=50, apex_angle_deg=60, input_angle_deg=80, manual=False, prev=disp, spectral_range_nm=spectral_range, spectral_res_nm=spectral_res) #sf11 manual prism
+disp = Grating(name="disperser", groove_density=300, alpha=18)
+# disp = Prism(name="disperser prism", glass_type=["main","CaF2","Li"], beam_diameter=20, base=50, apex_angle_deg=60, input_angle_deg=24, manual=False, spectral_range_nm=spectral_range, spectral_res_nm=spectral_res) #CaF2-Li manual prism
+# disp2 = Prism(name="second disperser prism", glass_type=["main","CaF2","Li"], beam_diameter=20, base=50, apex_angle_deg=60, input_angle_deg=50, prev=disp, manual=False, spectral_range_nm=spectral_range, spectral_res_nm=spectral_res) #CaF2-Li manual prism
+# disp = Prism(name="disperser prism", glass_type=["specs","SCHOTT-optical","F2"], beam_diameter=20, base=50, apex_angle_deg=60, input_angle_deg=36, manual=False, spectral_range_nm=spectral_range, spectral_res_nm=spectral_res) #sf11 manual prism
+# disp2 = Prism(name="disperser prism 2", glass_type=["specs","SCHOTT-optical","F2"], beam_diameter=20, base=50, apex_angle_deg=60, input_angle_deg=35, manual=False, prev=disp, spectral_range_nm=spectral_range, spectral_res_nm=spectral_res) #sf11 manual prism
 # disp_prism = Prism(name="disperser prism", glass_type=["specs","SCHOTT-optical","BK7"], beam_diameter=15, base=25,manual=True) #sf11 manual prism
 # disp = Prism(name="disperser prism", glass_type=["main","ZnSe","Marple"], beam_diameter=15, base=5,manual=False) #sf11 manual prism
 # sf11 S coeffs: [2, 0.0, 1.7385, 0.0136, 0.311, 0.0616, 1.1749, 121.92] #First element 2 is to specify Sllemeir-2 formula
@@ -61,7 +61,7 @@ collimator = Lens(name="collimator", focal_length=217, diameter=50)
 slit = Slit(name="slit", width=0.03, height=0.2) #mm @ZimMAIN 60" = 1.629 mm and 5" = 0.136 mm, 1" = 27 um
 # slit = Slit(name="slit", width=0.492, height=5.905) #mm @SST 60" = 5.905 mm and 5" = 0.492 mm, 1" = 98.4 um
 if __name__ == "__main__":
-    sowisp = Instrument(name="SOWISP", spectral_range=spectral_range, spatial_centers=centers_list, spectral_res_nm=spectral_res, echelle=ech, disperser=disp2, camera_lens=camera, collimator_lens=collimator, slit=slit, camera_sensor=asi294, wavelength_scan_width_nm=0.02)
+    sowisp = Instrument(name="SOWISP", spectral_range=spectral_range, spatial_centers=centers_list, spectral_res_nm=spectral_res, echelle=ech, disperser=disp, camera_lens=camera, collimator_lens=collimator, slit=slit, camera_sensor=asi294, wavelength_scan_width_nm=0.02)
     # sowisp.exportAsImage(species="Thorium", filename="Thorium_sowisp_ASI294MMPro", path="./correlation_lab_siesta", spectral_range_nm=spectral_range)
     # sowisp.exportAsFits(species=["Neon"], filename="Neon_sowisp_Zyla_slit_ESOv2", path="./correlation_lab_siesta", spectral_range_nm=spectral_range, wantSlitKernel=True)
     # sowisp.exportAsFits(species=["Thorium"], filename="Thorium_sowisp_ASI294MMPro_slit", path="./correlation_lab_siesta", spectral_range_nm=spectral_range, wantSlitKernel=True)
