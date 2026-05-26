@@ -101,7 +101,7 @@ class Prism(OpticalElement):
 
         if self.prev is not None:
             self.prev.compute_exitAngle(wavelength_nm=self.wavelength_nm)
-            input_angle_rad =  np.deg2rad(self.apex_angle_deg)/2 - np.deg2rad(self.input_angle_deg)  + np.deg2rad(self.prev.apex_angle_deg/2) + self.prev.exit_angle_rad
+            input_angle_rad =  np.ones_like(self.prev.exit_angle_rad) * (np.deg2rad(self.apex_angle_deg)/2  + np.deg2rad(self.prev.apex_angle_deg/2) + np.deg2rad(self.input_angle_deg)) - np.abs(self.prev.exit_angle_rad)
             # input_angle_rad = np.pi - np.deg2rad(self.input_angle_deg) + np.deg2rad(self.apex_angle_deg)/2 - np.deg2rad(self.prev.apex_angle_deg/2) - self.prev.exit_angle_rad
             # print(f"Input angle in rad for {self.name} computed from previous prism exit angle: {input_angle_rad}")
             # input_angle_rad = np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.input_angle_deg) - self.prev.exit_angle_rad + np.deg2rad(self.apex_angle_deg/2)#prev.apex/2 + self.apexangle/2
@@ -173,18 +173,23 @@ class Prism(OpticalElement):
             if np.isscalar(wavelength_nm):
                 idx_wl = np.argmin(np.abs(self.wavelength_nm - wavelength_nm))
                 # exit_angle_rad = np.deg2rad(self.apex_angle_deg) - self.input_angle_rad[idx_wl]  - np.arcsin(np.sqrt(n**2 - np.sin(self.input_angle_rad[idx_wl])**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(self.input_angle_rad[idx_wl]))
-                exit_angle_rad = -1 * np.arcsin(n * np.sin(np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(self.input_angle_rad[idx_wl])/n) ))
+                exit_angle_rad =-1*np.arcsin(n * np.sin(np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(self.input_angle_rad[idx_wl])/n) ))
+                print(f"refractive index n for {wavelength_nm} nm: {n}")
+                print(f"input angle lambda0 in rad for {self.prev.name} : {np.deg2rad(self.prev.input_angle_deg)}")
+                print(f"output angle lambda0 in rad for {self.prev.name} : {self.prev.exit_angle_rad[idx_wl]}")
+                print(f"input angle lambda0 in rad for {self.name} : {self.input_angle_rad[idx_wl]}")
+                print(f"output angle lambda0 in rad for {self.name} : {exit_angle_rad}")
 
             else:
                 # exit_angle_rad = np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg) - self.input_angle_rad  - np.arcsin(np.sqrt(n**2 - np.sin(self.input_angle_rad)**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(self.input_angle_rad))
-                exit_angle_rad = -1 * np.arcsin(n * np.sin(np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(self.input_angle_rad)/n) ))
+                exit_angle_rad = -1*np.arcsin(n * np.sin(np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(self.input_angle_rad)/n) ))
                 # exit_angle_rad = np.arcsin(n * np.sin(np.arcsin(np.sin(np.deg2rad(self.input_angle_rad))/n) - np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg)))
                 print(f"input angle in rad for {self.name} : {self.input_angle_rad[0]}, n={n[0]}, exit angle: {exit_angle_rad[0]}")
                 self.exit_angle_rad = exit_angle_rad
 
         else:
             # exit_angle_rad = np.arcsin(n * np.sin(np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(self.input_angle_rad)/n) ))
-            exit_angle_rad = -1 * np.arcsin(n * np.sin(np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(np.deg2rad(self.input_angle_deg))/n)))
+            exit_angle_rad =  -1*np.arcsin(n * np.sin(np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(np.deg2rad(self.input_angle_deg))/n)))
             # exit_angle_rad = np.deg2rad(self.apex_angle_deg) - np.deg2rad(self.input_angle_deg)  - np.arcsin(np.sqrt(n**2 - np.sin(np.deg2rad(self.input_angle_deg))**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(np.deg2rad(self.input_angle_deg)))
             self.exit_angle_rad = exit_angle_rad
         return exit_angle_rad
@@ -452,7 +457,7 @@ class Instrument(OpticalElement):
         if beta0_rad < 0:
             beta_rad_reduced = self.disperser.compute_exitAngle(wavelength_nm=spectral_array) - np.ones_like(spectral_array) * beta0_rad
         else:
-            beta_rad_reduced = self.disperser.compute_exitAngle(wavelength_nm=spectral_array) + np.ones_like(spectral_array) * beta0_rad
+            beta_rad_reduced = self.disperser.compute_exitAngle(wavelength_nm=spectral_array) - np.ones_like(spectral_array) * beta0_rad
 
         cmosy = self.camera_lens.focal_length * beta_rad_reduced + np.ones_like(spectral_array) * cmosy0 #mm
              
