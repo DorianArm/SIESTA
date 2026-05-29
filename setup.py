@@ -16,6 +16,10 @@ setup(
         "pandas>=2.0",
         "dash>=3.0",
         "plotly>=5.0",
-        "refractiveindex>=0.0.1"
+        "refractiveindex>=1.0.2"
     ],
 )
+
+# Need to add 2 lines in refractiveindex package (in refractiveindex.py)
+# self._coefs = None # in __init__ method of RefractiveIndexMaterial class
+# self._coefs = coefficients just after coefficients variable declaration
