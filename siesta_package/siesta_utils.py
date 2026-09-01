@@ -60,7 +60,7 @@ class Lens(OpticalElement):
         return f"Lens: {self.name}, Focal Length: {self.focal_length} mm, Diameter: {self.diameter} mm"
 
 
-#Class for Gratings
+# Class for Gratings
 class Grating(OpticalElement):
     def __init__(self, name: str, groove_density: float, alpha: float = 0, m_order: int = 1):
         super().__init__(name)
@@ -172,7 +172,6 @@ class Prism(OpticalElement):
         if self.input_angle_rad is not None:
             if np.isscalar(wavelength_nm):
                 idx_wl = np.argmin(np.abs(self.wavelength_nm - wavelength_nm))
-                # exit_angle_rad = np.deg2rad(self.apex_angle_deg) - self.input_angle_rad[idx_wl]  - np.arcsin(np.sqrt(n**2 - np.sin(self.input_angle_rad[idx_wl])**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(self.input_angle_rad[idx_wl]))
                 exit_angle_rad =-1*np.arcsin(n * np.sin(np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(self.input_angle_rad[idx_wl])/n) ))
                 print(f"refractive index n for {wavelength_nm} nm: {n}")
                 print(f"input angle lambda0 in rad for {self.prev.name} : {np.deg2rad(self.prev.input_angle_deg)}")
@@ -181,16 +180,12 @@ class Prism(OpticalElement):
                 print(f"output angle lambda0 in rad for {self.name} : {exit_angle_rad}")
 
             else:
-                # exit_angle_rad = np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg) - self.input_angle_rad  - np.arcsin(np.sqrt(n**2 - np.sin(self.input_angle_rad)**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(self.input_angle_rad))
                 exit_angle_rad = -1*np.arcsin(n * np.sin(np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(self.input_angle_rad)/n) ))
-                # exit_angle_rad = np.arcsin(n * np.sin(np.arcsin(np.sin(np.deg2rad(self.input_angle_rad))/n) - np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg)))
                 print(f"input angle in rad for {self.name} : {self.input_angle_rad[0]}, n={n[0]}, exit angle: {exit_angle_rad[0]}")
                 self.exit_angle_rad = exit_angle_rad
 
         else:
-            # exit_angle_rad = np.arcsin(n * np.sin(np.ones_like(self.prev.exit_angle_rad) * np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(self.input_angle_rad)/n) ))
             exit_angle_rad =  -1*np.arcsin(n * np.sin(np.deg2rad(self.apex_angle_deg) - np.arcsin(np.sin(np.deg2rad(self.input_angle_deg))/n)))
-            # exit_angle_rad = np.deg2rad(self.apex_angle_deg) - np.deg2rad(self.input_angle_deg)  - np.arcsin(np.sqrt(n**2 - np.sin(np.deg2rad(self.input_angle_deg))**2) * np.sin(np.deg2rad(self.apex_angle_deg)) - np.cos(np.deg2rad(self.apex_angle_deg)) * np.sin(np.deg2rad(self.input_angle_deg)))
             self.exit_angle_rad = exit_angle_rad
         return exit_angle_rad
 
@@ -208,8 +203,6 @@ class EchelleGrating(Grating):
 
     def compute_angularDispE(self,wavelength_nm: float):
         A = (2 * np.sin(np.deg2rad(self.blaze_angle))*np.cos(np.deg2rad(self.semi_deviation_angle_deg)))/(wavelength_nm/1e3 * np.cos(np.arcsin(self.groove_density*self.diffraction_order*wavelength_nm/1e6 - np.sin(np.deg2rad(self.blaze_angle + self.semi_deviation_angle_deg))))) #expected to be in mrad/nm (rad/um)
-        # u = (self.groove_density * self.diffraction_order/1e3)/(2*np.sin(np.deg2rad(self.blaze_angle)))
-        # A = (u)/(np.sqrt(1-np.power((u*wavelength_nm/1e3),2))) #expected to be in mrad/nm (rad/um)
         return A
         
     def compute_diffractionorder(self, blazewavelength: float):
@@ -297,7 +290,7 @@ class Instrument(OpticalElement):
         eso_thar_lines = np.load("./NIST_Atomic-Specie/ESO_THAR.npy").squeeze().tolist()
 
 
-        self.__spectral_lines = {"Mg I b3 5167": [516.7] ,"Mg I b2 5172": [517.2] ,"Mg I b1 5183": [518.3] ,"Fe I 5250": [525.0],"Mn I 5399": [539.9], "He I D3 5876":[587.6], "Na I D2 5890": [589.0] ,"Na I D1 5896": [589.6],"Fe I 6173 (HMI)": [617.3], "Fe I 6301-6302": [630.15],"Ca I 6439": [643.9], "Ha": [656.3], "Ni I 6643": [664.3],"Fe I/Ca I 6718": [671.8],"K I 7699": [769.9],"Ca II 8498": [849.8], "Ca II 8542": [854.2],"Ca II 8662": [866.2], "Neon": neon_lines, "Thorium": thorium_lines, "Argon": argon_lines, "ESO_THAR": eso_thar_lines} #to be continued, rn only wl > 500 nm
+        self.__spectral_lines = {"Balmer jump": [364.5], "Ca II K 3933": [393.3], "Ca II H 3968": [396.8], "Hb 4861": [486.1], "Mg I b3 5167": [516.7], "Mg I b2 5172": [517.2], "Mg I b1 5183": [518.3], "Fe I 5250": [525.0], "Mn I 5399": [539.9], "He I D3 5876": [587.6], "Na I D2 5890": [589.0], "Na I D1 5896": [589.6], "Fe I 6173 (HMI)": [617.3], "Fe I 6301-6302": [630.15], "Ca I 6439": [643.9], "Ha": [656.3], "Ni I 6643": [664.3], "Li I 6707 ": [670.7], "Fe I/Ca I 6718": [671.8], "K I 7699": [769.9], "Ca II 8498": [849.8], "Ca II 8542": [854.2], "Ca II 8662": [866.2], "Neon": neon_lines, "Thorium": thorium_lines, "Argon": argon_lines, "ESO_THAR": eso_thar_lines} #to be continued, rn only wl > 500 nm
 
         return self.__spectral_lines
 
@@ -327,7 +320,7 @@ class Instrument(OpticalElement):
         
         wavelengths = np.array([wavelength for wavelength in self.__spectral_lines[species] if spectral_range_nm[0] <= wavelength <= spectral_range_nm[1]])
         df_mapping_array = np.array([])
-        # df_mapping_array = np.zeros((len(wavelengths)*len(self.spatial_centers), 2))
+        
 
         for spatial_center in self.spatial_centers:
             dataset = self.computeCD(spatial_center=spatial_center, isArrayDefined=True, defined_spectral_array=np.array(wavelengths), spectral_range_nm=(None, None), spectral_res_nm=None)
@@ -368,7 +361,6 @@ class Instrument(OpticalElement):
             wavelengths.extend(wl)
         wavelengths.sort()
         wavelengths = np.array(wavelengths)
-        # df_mapping_array = np.zeros((len(wavelengths)*len(self.spatial_centers), 2))
         df_mapping_array = np.array([])
         for spatial_center in self.spatial_centers:
             dataset = self.computeCD(spatial_center=spatial_center, isArrayDefined=True, defined_spectral_array=np.array(wavelengths), spectral_range_nm=(None, None), spectral_res_nm=None)
@@ -421,11 +413,9 @@ class Instrument(OpticalElement):
 
         index_FSR = np.digitize(x=spectral_array, bins=FSR_bins)
 
-        # cmosx = self.camera_lens.focal_length * angular_dispersion_array[np.maximum(index_FSR-1,0)]/1000 * (spectral_array - blaze_wavelength_array[np.maximum(index_FSR-1,0)]) + np.ones(np.shape(spectral_array)) * cmosx0 #mm (mrad.nm⁻1 to rad.nm⁻1 was done with /1000)
         lambda0 = np.median(spectral_array) 
         idx = np.argmin(np.abs(spectral_array - lambda0))
         m0 = index_FSR[idx]
-        # beta0_rad = self.echelle.compute_exitAngle(wavelength_nm=lambda0, m_diffraction_order_array=m0, index_FSR=index_FSR) #rad])
         beta0_rad = self.echelle.compute_exitAngle(wavelength_nm=float(np.squeeze(self.echelle.compute_blazewavelength(diffraction_order=np.array([m0])))), m_diffraction_order_array=m0, index_FSR=index_FSR) #rad 
         # both betas are always of same sign
         if beta0_rad < 0:
@@ -706,13 +696,7 @@ class Instrument(OpticalElement):
 
                 # Layout details
                 if self.disperser.__class__.__name__ == "Prism":
-                    title = f"""
-                    Camera focal length : {self.camera_lens.focal_length} mm
-                    Echelle groove density : {self.echelle.groove_density:.1f} mm⁻¹<br>
-                    Echelle blaze angle : {self.echelle.blaze_angle:.1f}°<br>
-                    Deviation angle from Littrow : {2 * self.echelle.semi_deviation_angle_deg:.1f}°<br>
-                    Cross-disperser Prism: {self.disperser.base} mm
-                    """
+                    title = f"""Camera focal length : {self.camera_lens.focal_length} mm | Echelle groove density : {self.echelle.groove_density:.1f} mm⁻¹ | Echelle blaze angle : {self.echelle.blaze_angle:.1f}° | Deviation angle from Littrow : {2 * self.echelle.semi_deviation_angle_deg:.1f}°                   """
                 else:
                     title = f"""
                     Camera focal length : {self.camera_lens.focal_length} mm, 
@@ -827,12 +811,7 @@ class Instrument(OpticalElement):
                 # Layout details
                 if self.disperser.__class__.__name__ == "Prism":
                     title = f"""
-                    Camera focal length : {self.camera_lens.focal_length} mm<br>
-                    Echelle groove density : {self.echelle.groove_density:.1f} mm⁻¹<br>
-                    Echelle blaze angle : {self.echelle.blaze_angle:.1f}°<br>
-                    Deviation angle from Littrow : {2 * self.echelle.semi_deviation_angle_deg:.1f}°<br>
-                    Cross-disperser Prism: {self.disperser.base} mm
-                    """
+                    Camera focal length : {self.camera_lens.focal_length} mm | Echelle groove density : {self.echelle.groove_density:.1f} mm⁻¹ | Echelle blaze angle : {self.echelle.blaze_angle:.1f}° | Deviation angle from Littrow : {2 * self.echelle.semi_deviation_angle_deg:.1f}°"""
                 else:
                     title = f"""
                     Camera focal length : {self.camera_lens.focal_length} mm | Echelle groove density : {self.echelle.groove_density:.1f} mm⁻¹ | Echelle blaze angle : {self.echelle.blaze_angle:.1f}° | Deviation angle from Littrow : {2 * self.echelle.semi_deviation_angle_deg:.1f}° <br>Cross-disperser groove density : {self.disperser.groove_density:.1f}mm⁻¹"""
