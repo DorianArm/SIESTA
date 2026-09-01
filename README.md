@@ -25,3 +25,7 @@ In the getSpectralLines method (starting line 273), the __spectral_lines diction
 To add a specific spectral lines, just add a new element to the dictionary with its name and its value in nanometers. To add a group of spectral lines, add the .npy file to the dictionary as a value, with a convenient name as a dictionary key. To create these .npy files (1-D array of wavelength values in nm), I also share my parser that I used for the NIST database where I could also filter the most intense spectral lines (according to the database).
 ![image_spectralline](Example_ChangeSpectralLines.png)
 
+# Cite
+Please cite the following article if you use this work for a publication.
+
+Dorian Paillon, Michelle Galloway, Sean Sellers, Lucia Kleint, “An interactive Python simulation for echelle spectrographs”. In: Ground-based and Airborne Instrumentation for Astronomy XI. vol. 14149. International Society for Optics and Photonics. SPIE, 2026, 14149BJ. DOI: 10.1117/12.3105451
