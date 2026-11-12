@@ -22,6 +22,7 @@ import scienceplots
 import astropy.io.fits as fits
 import skimage
 
+from future import annotations
 
 plt.style.use('science')
 plt.style.use(['science','no-latex'])
@@ -290,7 +291,9 @@ class Instrument(OpticalElement):
         eso_thar_lines = np.load("./NIST_Atomic-Specie/ESO_THAR.npy").squeeze().tolist()
 
 
-        self.__spectral_lines = {"Balmer jump": [364.5], "Ca II K 3933": [393.3], "Ca II H 3968": [396.8], "Hb 4861": [486.1], "Mg I b3 5167": [516.7], "Mg I b2 5172": [517.2], "Mg I b1 5183": [518.3], "Fe I 5250": [525.0], "Mn I 5399": [539.9], "He I D3 5876": [587.6], "Na I D2 5890": [589.0], "Na I D1 5896": [589.6], "Fe I 6173 (HMI)": [617.3], "Fe I 6301-6302": [630.15], "Ca I 6439": [643.9], "Ha": [656.3], "Ni I 6643": [664.3], "Li I 6707 ": [670.7], "Fe I/Ca I 6718": [671.8], "K I 7699": [769.9], "Ca II 8498": [849.8], "Ca II 8542": [854.2], "Ca II 8662": [866.2], "Neon": neon_lines, "Thorium": thorium_lines, "Argon": argon_lines, "ESO_THAR": eso_thar_lines} #to be continued, rn only wl > 500 nm
+
+
+        self.__spectral_lines = {"Balmer jump": [364.5], "Ca II K 3933": [393.3], "Ca II H 3968": [396.8], "Hd 4102": [410.2], "Hg 4340": [434.0], "Hb 4861": [486.1], "Mg I b3 5167": [516.7], "Mg I b2 5172": [517.2], "Mg I b1 5183": [518.3], "Fe I 5250": [525.0], "Mn I 5399": [539.9], "He I D3 5876": [587.6], "Na I D2 5890": [589.0], "Na I D1 5896": [589.6], "Fe I 6173 (HMI)": [617.3], "Fe I 6301-6302": [630.15], "Ca I 6439": [643.9], "Ha": [656.3], "Ni I 6643": [664.3], "Li I 6707 ": [670.7], "Fe I/Ca I 6718": [671.8], "K I 7699": [769.9], "Ca II 8498": [849.8], "Ca II 8542": [854.2], "Ca II 8662": [866.2], "Neon": neon_lines, "Thorium": thorium_lines, "Argon": argon_lines, "ESO_THAR": eso_thar_lines} #to be continued, rn only wl > 500 nm
 
         return self.__spectral_lines
 
@@ -592,10 +595,10 @@ class Instrument(OpticalElement):
 
         #-----Actual Plotting------#
         app = dash.Dash(__name__)
-        app.title = "SIESTA - Simulating Interactive Echelle Spectrogram for Targeted Applications"
+        app.title = "SIESTA - Simulating Interactive Echelle Spectroscopy for Targeted Applications"
 
         app.layout = html.Div([
-            html.H2("SIESTA - Simulating Interactive Echelle Spectrogram for Targeted Applications", style={'color': 'blue'}),
+            html.H2("SIESTA - Simulating Interactive Echelle Spectroscopy for Targeted Applications", style={'color': 'blue'}),
             html.Div([
             html.Button("Show All", id='show-all-button', n_clicks=0, style={'marginRight': '10px'}),
             html.Button("Clear All", id='clear-all-button', n_clicks=0)
@@ -708,11 +711,14 @@ class Instrument(OpticalElement):
 
                 fig.update_layout(
                     title=title,
-                    width=1200,
-                    height=800,
+                    width=1800,
+                    height=1200,
+                    plot_bgcolor="#b4b4bd",
+                    paper_bgcolor="#ffffff",
                     xaxis_title="X [mm]",
                     yaxis_title="Y [mm]",
-                    xaxis=dict(scaleanchor="y", scaleratio=1),
+                    xaxis=dict(scaleanchor="y", scaleratio=1, gridcolor='white', gridwidth=1, zerolinecolor='white', zerolinewidth=1),
+                    yaxis=dict(gridcolor='white', gridwidth=1, zerolinecolor='white', zerolinewidth=1),
                     showlegend=True
                 )
 
@@ -778,7 +784,7 @@ class Instrument(OpticalElement):
                             y=df_sel["Y"],
                             mode="markers",
                             marker=dict(
-                            size=8,
+                            size=16,
                             color=df_sel["color"]
                             ),
                             error_x=dict(
@@ -818,11 +824,14 @@ class Instrument(OpticalElement):
 
                 fig.update_layout(
                     title=title,
-                    width=1200,
-                    height=800,
+                    width=1800,
+                    height=1200,
+                    plot_bgcolor="#b4b4bd",
+                    paper_bgcolor="#ffffff",
                     xaxis_title="X [mm]",
                     yaxis_title="Y [mm]",
-                    xaxis=dict(scaleanchor="y", scaleratio=1),
+                    xaxis=dict(scaleanchor="y", scaleratio=1, gridcolor='white', gridwidth=1, zerolinecolor='white', zerolinewidth=1),
+                    yaxis=dict(gridcolor='white', gridwidth=1, zerolinecolor='white', zerolinewidth=1),
                     showlegend=True
                 )
 
